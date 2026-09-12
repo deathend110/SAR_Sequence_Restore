@@ -1,4 +1,4 @@
-# 在项目根目录运行；CUDA_VISIBLE_DEVICES=0,1，官方 DataParallel。
+# 在项目根目录通过 torchrun 运行；CUDA_VISIBLE_DEVICES=0,1，双进程 DDP。
 name: swinir_sar_single
 model_type: SwinIRModel
 scale: 1
@@ -15,7 +15,7 @@ datasets:
     gt_size: 128
     use_shuffle: true
     num_worker_per_gpu: 4
-    batch_size_per_gpu: 3  # DP 下两卡合计 batch 6。
+    batch_size_per_gpu: 3  # DDP 每个 rank batch 3，两卡合计 batch 6。
     dataset_enlarge_ratio: 1
     prefetch_mode: ~
   val:

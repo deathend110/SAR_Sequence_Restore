@@ -6,6 +6,8 @@ import logging
 import math
 import os
 from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 import torch
@@ -17,7 +19,7 @@ from basicsr.utils.options import yaml_load
 
 
 @pytest.mark.skipif(os.environ.get('SAR_GPU_SMOKE') != '1', reason='Set SAR_GPU_SMOKE=1 for full two-GPU verification.')
-@pytest.mark.parametrize('arch', ['swinir', 'hint'])
+@pytest.mark.parametrize('arch', ['hint'])
 def test_full_dp_train_validate_resume(arch, tmp_path):
     assert torch.cuda.device_count() == 2
     root = Path(__file__).resolve().parents[1]
@@ -87,3 +89,12 @@ def test_full_dp_train_validate_resume(arch, tmp_path):
     report = dict(arch=arch, train_peak_allocated_gib=train_peak,
                   restored_loss=float(restored.log_dict['l_pix']), validation_frames=9)
     print('SAR_GPU_RESULT', json.dumps(report), flush=True)
+
+
+@pytest.mark.skipif(os.environ.get('SAR_GPU_SMOKE') != '1', reason='Set SAR_GPU_SMOKE=1 for full two-GPU verification.')
+def test_swinir_ddp_train_validate_resume(tmp_path):
+    root = Path(__file__).resolve().parents[1]
+    subprocess.run([
+        sys.executable, '-m', 'torch.distributed.run', '--standalone', '--nproc_per_node=2',
+        str(root / 'tests/swinir_ddp_worker.py'), '--output', str(tmp_path),
+    ], cwd=root, check=True)

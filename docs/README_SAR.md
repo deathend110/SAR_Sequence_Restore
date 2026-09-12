@@ -78,6 +78,10 @@ tail -f logs/swinir.console.log
 
 训练结果分别写入 `experiments/swinir_sar_single/`、`experiments/hint_sar_single/`：`models/` 保存网络，`training_states/` 保存优化器和 scheduler，日志位于实验目录，TensorBoard 位于 `tb_logger/<实验名>/`。验证只汇总恢复 PSNR/SSIM，不逐图打印、不保存恢复图片。每次验证会暂停训练并处理完整测试集。
 
+SwinIR 的训练内验证由各个 DDP rank 按样本索引交错分片，双卡各处理 1845 张，每卡 batch=1，不补齐或重复样本。验证前向直接使用 DDP 内部网络；结束时归约指标总和及实际样本数，按全部帧等权计算 PSNR/SSIM，然后各卡继续训练。rank 0 记录验证开始、结束、总耗时和汇总指标，NCCL 超时设置不变。
+
+HINT 保留原有 `SRModel` 验证行为：仅 rank 0 执行全量验证，其他 rank 会进入下一训练步等待同步，长验证仍可能触发 NCCL 超时。本次 SwinIR 修复不改变 HINT 的验证顺序和持久缓存。
+
 ## 停止和续训
 
 前台 Ctrl+C 停止；后台先用 `pgrep -af 'basicsr/train.py'` 确认对应 PID，再向该进程发送 `kill <PID>`。停止时不额外保存，以最近完整检查点为准。
@@ -99,7 +103,7 @@ basicsr/train.py \
 
 ## 独立 SAR 评估
 
-训练内验证使用官方汇总；六项输入／恢复／提升量及九帧、sequence 统计通过独立脚本生成。例如评估第 6667 步的 SwinIR：
+训练内验证使用 BasicSR 的 PSNR/SSIM 指标口径，SwinIR 在各 rank 间汇总；六项输入／恢复／提升量及九帧、sequence 统计通过独立脚本生成。例如评估第 6667 步的 SwinIR：
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 uv run --no-sync python scripts/eval_sar.py \
@@ -153,6 +157,12 @@ uv run --no-sync python -m pytest -o addopts='' \
   tests/test_sar_dataset.py tests/test_sar_evaluation.py tests/test_hint_equivalence.py -q
 ```
 
+SwinIR 的 padding、EMA 选择和验证前后模式恢复可在 CPU 上检查：
+
+```bash
+uv run --no-sync python -m pytest -o addopts='' tests/test_swinir_model.py -q
+```
+
 HINT 等价测试默认读取同级 `/data/cjz/HINT/basicsr/models/archs/HINT_arch.py`；也可通过 `HINT_REFERENCE_PATH` 指定。该文件只用于迁移测试，不是运行依赖；没有参考文件时该项跳过。
 
 完整模型双卡短流程（确认 GPU 0、1 空闲后运行）：
@@ -162,4 +172,19 @@ CUDA_VISIBLE_DEVICES=0,1 SAR_GPU_SMOKE=1 uv run --no-sync python -m pytest \
   -o addopts='' tests/test_sar_training.py -q -s
 ```
 
-该检查使用真实数据、总 batch 6 和完整网络，验证双卡训练、整图验证后继续训练、原生保存与恢复；只缩短迭代预算和验证 sequence 数，不启动正式长训练。
+该检查使用真实数据、总 batch 6 和完整网络。SwinIR 测试实际通过 `torchrun` 启动两个 DDP 进程，检查奇数样本、空分片、重复验证、单卡指标对照、验证后继续训练和原生保存恢复；HINT 保留原有 DataParallel 短流程，不代表 HINT 的 DDP 验证已通过。只运行 SwinIR 时在上述命令末尾加 `-k swinir`。
+
+使用已有第 6667 步检查点验证完整故障场景（需较长时间，先确认 GPU 0、1 空闲）：
+
+```bash
+check_dir=$(mktemp -d /tmp/swinir-ddp-validation.XXXXXX)
+CUDA_VISIBLE_DEVICES=0,1 OMP_NUM_THREADS=16 uv run --no-sync torchrun --standalone --nproc_per_node=2 \
+  tests/swinir_ddp_worker.py --output "$check_dir" \
+  --full-checkpoint experiments/swinir_sar_single
+```
+
+此命令为每个进程分配 16 个 CPU 线程以加快整图注意力掩码计算，读取模型、优化器和调度状态，完成 3690 张图的双卡验证后训练第 6668 步并检查两卡参数一致，然后退出。日志和 `result.json` 写入临时目录，不覆盖正式实验，也不启动长期训练。通过后可使用上文带 `--auto_resume` 的命令从正式检查点续训。
+
+2026-09-12 验收：双 RTX 4090、每进程 16 个 CPU 线程，验证 3690 张图耗时 2709.06 秒（45 分 9 秒），PSNR=22.370765、SSIM=0.741152；随后第 6668 步 loss=0.062092，两卡全部参数完全一致。默认 `torchrun` 线程设置下的 SwinIR DDP 短流程也通过，覆盖保存恢复、连续验证、奇数/空分片及单卡指标对照。
+
+CPU 前向、SAR 数据集和评估检查合计 9 项通过、1 项已有失败：`test_committed_split_and_shared_protocol` 要求两模型训练配置相同，但 HINT 当前配置已调整 batch、学习率和总步数。本次保留 HINT 配置及该测试，不将此失败归入 SwinIR 验证修复。
