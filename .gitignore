@@ -1,3 +1,10 @@
+# obisidian
+docs/.obsidian/
+
+# Sync
+docs/.stfolder/
+docs/.stignore
+
 # ignored folders
 datasets/*
 experiments/*
