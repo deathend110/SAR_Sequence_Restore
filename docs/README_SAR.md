@@ -24,8 +24,8 @@ uv run --no-sync python -c 'import basicsr, torch; print(basicsr.__file__); prin
 | 训练 | 3,688 条 sequence，33,192 帧 |
 | 验证／测试 | 410 条 sequence，3,690 帧；两者使用同一列表 |
 | 图像 | 单通道、[0,1]；训练共同裁剪 128×128，不旋转翻转；验证整图 512×512 |
-| 多卡 | 官方 DataParallel；物理 GPU 0、1 |
-| Batch／workers | 每卡 3／4，双卡合计 batch 6、workers 8 |
+| 多卡 | 官方 BasicSR DistributedDataParallel（DDP）；通过 `torchrun` + `--launcher pytorch` 启动；world_size=2；物理 GPU 0、1 |
+| Batch／workers | `batch_size_per_gpu: 3`；每个 rank batch=3，global batch=3×2=6；`num_worker_per_gpu: 4`；两个 rank 合计 workers=8 |
 | 种子／数据重复倍率 | 42／1 |
 | 损失／优化器 | Charbonnier eps=1e-9，mean；Adam lr=1.732e-4、betas=[0.9,0.999]、weight decay=0 |
 | 调度 | MultiStepLR，milestones=[1066667,1600000,1866667,2000000,2133333]，gamma=0.5 |
@@ -40,23 +40,39 @@ uv run --no-sync python -c 'import basicsr, torch; print(basicsr.__file__); prin
 一次选择一个实验运行：
 
 ```bash
-CUDA_VISIBLE_DEVICES=0,1 uv run --no-sync python basicsr/train.py \
-  -opt options/SAR/train_swinir_single.yml
+CUDA_VISIBLE_DEVICES=0,1 \
+uv run --no-sync torchrun \
+--nproc_per_node=2 \
+--master_port=29501 \
+basicsr/train.py \
+-opt options/SAR/train_swinir_single.yml \
+--launcher pytorch
 ```
 
 ```bash
-CUDA_VISIBLE_DEVICES=0,1 uv run --no-sync python basicsr/train.py \
-  -opt options/SAR/train_hint_single.yml
+CUDA_VISIBLE_DEVICES=0,1 \
+uv run --no-sync torchrun \
+--nproc_per_node=2 \
+--master_port=29501 \
+basicsr/train.py \
+-opt options/SAR/train_hint_single.yml \
+--launcher pytorch
 ```
 
-不传 `--launcher`，由官方入口使用 DataParallel。换用 GPU 0、3 时把环境变量改为 `0,3`。`batch_size_per_gpu` 与 `num_gpu` 相乘才是 DP 总 batch；仅改可见卡数量而不改 YAML，会使数据加载的总 batch 与预期不同。
+SwinIR 与 HINT 均正式采用官方 BasicSR 的 DistributedDataParallel（DDP）。以上命令通过 `torchrun` 启动双卡 `world_size=2`；每个 rank 的 batch=3，global batch=3×2=6；每个 rank 的 `num_worker_per_gpu=4`，两个 rank 合计 workers=8。换用其他两张 GPU 时只需修改 `CUDA_VISIBLE_DEVICES`，并保持 `--nproc_per_node=2`。
 
 后台运行示例：
 
 ```bash
 mkdir -p logs
-nohup env CUDA_VISIBLE_DEVICES=0,1 uv run --no-sync python basicsr/train.py \
-  -opt options/SAR/train_swinir_single.yml > logs/swinir.console.log 2>&1 &
+nohup env CUDA_VISIBLE_DEVICES=0,1 \
+uv run --no-sync torchrun \
+--nproc_per_node=2 \
+--master_port=29501 \
+basicsr/train.py \
+-opt options/SAR/train_swinir_single.yml \
+--launcher pytorch \
+> logs/swinir.console.log 2>&1 &
 tail -f logs/swinir.console.log
 ```
 
@@ -69,11 +85,17 @@ tail -f logs/swinir.console.log
 续训必须显式启用官方自动恢复：
 
 ```bash
-CUDA_VISIBLE_DEVICES=0,1 uv run --no-sync python basicsr/train.py \
-  -opt options/SAR/train_swinir_single.yml --auto_resume
+CUDA_VISIBLE_DEVICES=0,1 \
+uv run --no-sync torchrun \
+--nproc_per_node=2 \
+--master_port=29501 \
+basicsr/train.py \
+-opt options/SAR/train_swinir_single.yml \
+--launcher pytorch \
+--auto_resume
 ```
 
-也可在 YAML 的 `path.resume_state` 指定 `.state` 文件。网络和 training state 应成套保留。BasicSR 会恢复参数、优化器和调度状态，不保存数据迭代器与 HINT 的普通属性 cache。开启新实验时复制 YAML 并修改 `name`；不要把不带恢复选项的原命令当作续训命令。
+也可在 YAML 的 `path.resume_state` 指定 `.state` 文件。网络和 training state 应成套保留。BasicSR 会恢复参数、优化器和调度状态，不保存数据迭代器；HINT 的 `qv_cache` 也不属于 BasicSR checkpoint。开启新实验时复制 YAML 并修改 `name`；不要把不带恢复选项的原命令当作续训命令。
 
 ## 独立 SAR 评估
 
@@ -93,7 +115,7 @@ CUDA_VISIBLE_DEVICES=0 uv run --no-sync python scripts/eval_sar.py \
   --force_yml path:pretrain_network_g=experiments/hint_sar_single/models/net_g_6667.pth
 ```
 
-测试配置默认指向训练完成后保存的 `net_g_latest.pth`；评估中间检查点使用上面的参数覆盖。独立评估固定单 GPU、batch 1，按 split 顺序推理，不保存恢复图。结果目录示例：
+测试配置默认指向训练完成后保存的 `net_g_latest.pth`；评估中间检查点使用上面的参数覆盖。独立评估固定单 GPU（`num_gpu: 1`）、batch 1，不使用 DDP，按 split 顺序推理，不保存恢复图。结果目录示例：
 
 ```text
 results/swinir_sar_single/net_g_6667/
@@ -120,7 +142,7 @@ uv run --no-sync python scripts/plot_sar_metrics.py \
 
 ## HINT 与后续扩展
 
-HINT 核心计算和 `qv_cache` 更新保持来源实现。独立评估对每个数据集新建模型，从空 cache 开始；官方 DP 对网络副本的管理也直接沿用，其状态生命周期与单 GPU 调用可能不同。reset／persistent 和顺序依赖作为后续专项研究，本轮没有新增策略。
+HINT 保留作者源码的 persistent `qv_cache` 行为。DDP 下每个 rank 持有自己长期存在的 HINT 模型实例，因此各 rank 的 `qv_cache` 独立持续更新。本阶段不修改 cache 生命周期、不主动 reset `qv_cache`。`qv_cache` 不是 Parameter/Buffer，不属于 BasicSR checkpoint，因此 resume 后 cache 会从空状态重新开始。独立评估对每个数据集新建模型，从空 cache 开始。本节只做事实说明，不评价或修改算法。
 
 新网络放在 `basicsr/archs/*_arch.py` 并注册 `ARCH_REGISTRY`；新数据集使用 `DATASET_REGISTRY`。仅当训练行为确有变化时才增加 `MODEL_REGISTRY` 类型。第一阶段不迁 HINT 的 FFTLoss、MixUp、渐进训练、特殊裁剪或 cyclic scheduler。
 
