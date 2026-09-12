@@ -4,6 +4,7 @@ model_type: SwinIRModel
 scale: 1
 num_gpu: 2
 manual_seed: 42
+final_test_opt: options/SAR/test_swinir_single.yml
 
 datasets:
   train:
@@ -19,11 +20,11 @@ datasets:
     dataset_enlarge_ratio: 1
     prefetch_mode: ~
   val:
-    name: sar_test
+    name: sar_val
     type: SARSingleDataset
     dataroot_lq: /data/cjz/SAR_Transformer/dataset_range_2dsft/range_2d_sft_qh2p5_ql1p5_s1_fr0p9_fa0p5_phi0_lp0p99_hp99p9_roi600_eb64/LQ
     dataroot_gt: /data/cjz/SAR_Transformer/dataset_range_2dsft/range_2d_sft_qh2p5_ql1p5_s1_fr0p9_fa0p5_phi0_lp0p99_hp99p9_roi600_eb64/GT
-    split_file: docs/splits/sar_single_seed42/test.txt
+    split_file: docs/splits/sar_single_seed42/val.txt
 
 network_g:
   type: SwinIR

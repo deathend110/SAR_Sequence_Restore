@@ -67,16 +67,31 @@ def test_invalid_image_shape(sar_pair):
 
 def test_committed_split_and_shared_protocol():
     configs = [yaml_load(str(ROOT / f'options/SAR/train_{arch}_single.yml')) for arch in ('swinir', 'hint')]
-    for key in ('train', 'datasets', 'val', 'logger', 'num_gpu', 'manual_seed'):
-        assert configs[0][key] == configs[1][key]
-    train = (ROOT / 'docs/splits/sar_single_seed42/train.txt').read_text().splitlines()
-    test = (ROOT / 'docs/splits/sar_single_seed42/test.txt').read_text().splitlines()
+    for arch, config in zip(('swinir', 'hint'), configs):
+        assert config['datasets']['train']['split_file'] == 'docs/splits/sar_single_seed42/train.txt'
+        assert config['datasets']['val']['split_file'] == 'docs/splits/sar_single_seed42/val.txt'
+        assert config['datasets']['val']['name'] == 'sar_val'
+        assert config['val']['save_img'] is False
+        assert config['final_test_opt'] == f'options/SAR/test_{arch}_single.yml'
+        test_config = yaml_load(str(ROOT / config['final_test_opt']))
+        assert test_config['datasets']['test']['split_file'] == 'docs/splits/sar_single_seed42/test.txt'
+        assert test_config['val']['save_img'] is True
+    train = (ROOT / 'docs/splits/sar_single_seed42/train.txt').read_text(encoding='utf-8').splitlines()
+    val = (ROOT / 'docs/splits/sar_single_seed42/val.txt').read_text(encoding='utf-8').splitlines()
+    test = (ROOT / 'docs/splits/sar_single_seed42/test.txt').read_text(encoding='utf-8').splitlines()
     assert len(train) == len(set(train)) == 3688
-    assert len(test) == len(set(test)) == 410
+    assert len(val) == len(set(val)) == 82
+    assert len(test) == len(set(test)) == 328
+    assert not set(train) & set(val)
     assert not set(train) & set(test)
-    expected = sorted(train + test)
+    assert not set(val) & set(test)
+    expected = sorted(train + val + test)
     random.Random(42).shuffle(expected)
-    assert expected == train + test
+    assert expected[:3688] == train
+    held_out = expected[3688:]
+    chosen = set(random.Random(42).sample(held_out, 82))
+    assert val == [name for name in held_out if name in chosen]
+    assert test == [name for name in held_out if name not in chosen]
     data_root = Path(configs[0]['datasets']['train']['dataroot_lq'])
     if data_root.is_dir():
-        assert set(train + test) == {p.name for p in data_root.iterdir() if p.is_dir()}
+        assert set(train + val + test) == {p.name for p in data_root.iterdir() if p.is_dir()}

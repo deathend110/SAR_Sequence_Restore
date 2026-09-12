@@ -1,6 +1,9 @@
 import datetime
+import gc
 import logging
 import math
+import subprocess
+import sys
 import time
 import torch
 from os import path as osp
@@ -208,6 +211,22 @@ def train_pipeline(root_path):
             model.validation(val_loader, current_iter, tb_logger, opt['val']['save_img'])
     if tb_logger:
         tb_logger.close()
+
+    if opt.get('final_test_opt'):
+        # 最终测试独立运行，其他 rank 不在 NCCL 集合通信中等待长时间测试。
+        if opt['dist']:
+            torch.distributed.destroy_process_group()
+        del model, resume_state
+        gc.collect()
+        torch.cuda.empty_cache()
+        if opt['rank'] == 0:
+            checkpoint = osp.join(opt['path']['models'], 'net_g_latest.pth')
+            logger.info(f'Start final SAR test from {checkpoint}.')
+            subprocess.run([
+                sys.executable, osp.join(root_path, 'scripts', 'eval_sar.py'),
+                '-opt', osp.join(root_path, opt['final_test_opt']),
+                '--force_yml', f'path:pretrain_network_g={checkpoint}', f'name={opt["name"]}',
+            ], cwd=root_path, check=True)
 
 
 if __name__ == '__main__':

@@ -94,7 +94,7 @@ def check_validation(model, dataset, rank, output):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--full-checkpoint', type=Path, help='读取此实验目录的第 6667 步，验证全部图像后再训练一步。')
+    parser.add_argument('--resume-state', type=Path, help='读取完整 training state，验证全部验证图像后再训练一步。')
     args = parser.parse_args()
     rank = int(os.environ['RANK'])
     torch.cuda.set_device(int(os.environ['LOCAL_RANK']))
@@ -110,8 +110,10 @@ def main():
         opt['path'][key] = str(path)
     for phase in ('train', 'val'):
         opt['datasets'][phase]['phase'] = phase
-    if args.full_checkpoint:
-        opt['path']['pretrain_network_g'] = str(args.full_checkpoint / 'models/net_g_6667.pth')
+    if args.resume_state:
+        state = torch.load(args.resume_state, map_location='cpu', weights_only=True)
+        opt['path']['pretrain_network_g'] = str(
+            args.resume_state.parent.parent / 'models' / f'net_g_{state["iter"]}.pth')
     else:
         opt['train']['scheduler']['milestones'] = [3]
     model = build_model(deepcopy(opt))
@@ -120,16 +122,19 @@ def main():
     batch = next(iter(DataLoader(train, batch_size=3, sampler=range(rank * 3, rank * 3 + 3))))
     val = build_dataset(opt['datasets']['val'])
 
-    if args.full_checkpoint:
-        state = torch.load(args.full_checkpoint / 'training_states/6667.state',
-                           map_location='cpu', weights_only=True)
+    if args.resume_state:
         model.resume_training(state)
+        torch.cuda.reset_peak_memory_stats()
         start = time.perf_counter()
-        model.validation(DataLoader(val, batch_size=1), current_iter=6667, tb_logger=None, save_img=False)
+        model.validation(DataLoader(val, batch_size=1), current_iter=state['iter'], tb_logger=None, save_img=False)
         elapsed = time.perf_counter() - start
-        train_step(model, batch, 6668)
+        peaks = [None] * dist.get_world_size()
+        dist.all_gather_object(peaks, torch.cuda.max_memory_allocated() / 2**30)
+        train_step(model, batch, state['iter'] + 1)
         report = dict(validation_frames=len(val), validation_seconds=elapsed,
-                      metrics=model.metric_results, continued_iter=6668, loss=float(model.log_dict['l_pix']))
+                      frames_per_second=len(val) / elapsed, peak_allocated_gib=peaks,
+                      metrics=model.metric_results, continued_iter=state['iter'] + 1,
+                      loss=float(model.log_dict['l_pix']))
     else:
         for step in (1, 2):
             train_step(model, batch, step)

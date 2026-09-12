@@ -8,7 +8,7 @@ import numpy as np
 from basicsr.data import build_dataloader, build_dataset
 from basicsr.metrics import calculate_metric
 from basicsr.models import build_model
-from basicsr.utils import get_root_logger, tensor2img
+from basicsr.utils import get_root_logger, imwrite, tensor2img
 from basicsr.utils.options import parse_options
 
 
@@ -18,8 +18,8 @@ METRIC_NAMES = (
 )
 
 
-def evaluate(model, test_loader, output_dir, logger):
-    """逐帧计算，全部结束后写 CSV 并只打印一次总体指标；不写恢复图片。"""
+def evaluate(model, test_loader, output_dir, logger, save_img=False):
+    """逐帧计算并按需保存恢复图，结束后写 CSV 和总体指标。"""
     if len(test_loader.dataset) == 0:
         raise ValueError('SAR evaluation dataset is empty.')
     output_dir = Path(output_dir)
@@ -33,6 +33,10 @@ def evaluate(model, test_loader, output_dir, logger):
         restored = tensor2img(visuals['result'])
         gt = tensor2img(visuals['gt'])
         row = dict(sequence_name=batch['sequence_name'][0], frame_idx=int(batch['frame_idx'][0]))
+        if save_img:
+            # sequence 分目录，避免不同序列的同名帧相互覆盖；保存指标实际使用的 uint8 图。
+            image_path = output_dir / 'restored' / row['sequence_name'] / f'{row["frame_idx"]:03d}.png'
+            imwrite(restored, str(image_path))
         # 固定 uint8 image-based 协议，避免与浮点 tensor 指标混用。
         for metric in ('psnr', 'ssim'):
             metric_opt = dict(type=f'calculate_{metric}', crop_border=0, test_y_channel=False)
@@ -96,7 +100,7 @@ def main():
         loader = build_dataloader(dataset, dataset_opt, num_gpu=opt['num_gpu'], dist=False, seed=opt['manual_seed'])
         # 每个数据集从新模型开始；HINT 网络内部 cache 的后续更新沿用原实现。
         model = build_model(opt)
-        evaluate(model, loader, result_root / dataset_opt['name'], logger)
+        evaluate(model, loader, result_root / dataset_opt['name'], logger, save_img=opt['val']['save_img'])
 
 
 if __name__ == '__main__':

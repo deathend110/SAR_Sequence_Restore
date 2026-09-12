@@ -259,10 +259,10 @@ class SwinTransformerBlock(nn.Module):
 
         self.register_buffer('attn_mask', attn_mask)
 
-    def calculate_mask(self, x_size):
+    def calculate_mask(self, x_size, device=None):
         # calculate attention mask for SW-MSA
         h, w = x_size
-        img_mask = torch.zeros((1, h, w, 1))  # 1 h w 1
+        img_mask = torch.zeros((1, h, w, 1), device=device)  # 1 h w 1
         h_slices = (slice(0, -self.window_size), slice(-self.window_size,
                                                        -self.shift_size), slice(-self.shift_size, None))
         w_slices = (slice(0, -self.window_size), slice(-self.window_size,
@@ -280,7 +280,7 @@ class SwinTransformerBlock(nn.Module):
 
         return attn_mask
 
-    def forward(self, x, x_size):
+    def forward(self, x, x_size, attn_masks=None):
         h, w = x_size
         b, _, c = x.shape
         # assert seq_len == h * w, "input feature has wrong size"
@@ -303,7 +303,15 @@ class SwinTransformerBlock(nn.Module):
         if self.input_resolution == x_size:
             attn_windows = self.attn(x_windows, mask=self.attn_mask)  # nw*b, window_size*window_size, c
         else:
-            attn_windows = self.attn(x_windows, mask=self.calculate_mask(x_size).to(x.device))
+            # 同尺寸各层共享掩码；保留无位移 block 原有的动态掩码计算语义。
+            if attn_masks is None:
+                mask = self.calculate_mask(x_size, device=x.device)
+            else:
+                key = (self.window_size, self.shift_size)
+                if key not in attn_masks:
+                    attn_masks[key] = self.calculate_mask(x_size, device=x.device)
+                mask = attn_masks[key]
+            attn_windows = self.attn(x_windows, mask=mask)
 
         # merge windows
         attn_windows = attn_windows.view(-1, self.window_size, self.window_size, c)
@@ -455,12 +463,12 @@ class BasicLayer(nn.Module):
         else:
             self.downsample = None
 
-    def forward(self, x, x_size):
+    def forward(self, x, x_size, attn_masks=None):
         for blk in self.blocks:
             if self.use_checkpoint:
-                x = checkpoint.checkpoint(blk, x)
+                x = checkpoint.checkpoint(blk, x, x_size, attn_masks)
             else:
-                x = blk(x, x_size)
+                x = blk(x, x_size, attn_masks)
         if self.downsample is not None:
             x = self.downsample(x)
         return x
@@ -554,8 +562,8 @@ class RSTB(nn.Module):
         self.patch_unembed = PatchUnEmbed(
             img_size=img_size, patch_size=patch_size, in_chans=0, embed_dim=dim, norm_layer=None)
 
-    def forward(self, x, x_size):
-        return self.patch_embed(self.conv(self.patch_unembed(self.residual_group(x, x_size), x_size))) + x
+    def forward(self, x, x_size, attn_masks=None):
+        return self.patch_embed(self.conv(self.patch_unembed(self.residual_group(x, x_size, attn_masks), x_size))) + x
 
     def flops(self):
         flops = 0
@@ -754,6 +762,9 @@ class SwinIR(nn.Module):
             self.mean = torch.zeros(1, 1, 1, 1)
         self.upscale = upscale
         self.upsampler = upsampler
+        # 仅缓存当前尺寸/设备的运行时掩码，不作为 buffer 或检查点内容。
+        self._attn_mask_context = None
+        self._attn_masks = {}
 
         # ------------------------- 1, shallow feature extraction ------------------------- #
         self.conv_first = nn.Conv2d(num_in_ch, embed_dim, 3, 1, 1)
@@ -875,13 +886,17 @@ class SwinIR(nn.Module):
 
     def forward_features(self, x):
         x_size = (x.shape[2], x.shape[3])
+        mask_context = (x_size, x.device)
+        if self._attn_mask_context != mask_context:
+            self._attn_mask_context = mask_context
+            self._attn_masks = {}
         x = self.patch_embed(x)
         if self.ape:
             x = x + self.absolute_pos_embed
         x = self.pos_drop(x)
 
         for layer in self.layers:
-            x = layer(x, x_size)
+            x = layer(x, x_size, self._attn_masks)
 
         x = self.norm(x)  # b seq_len c
         x = self.patch_unembed(x, x_size)

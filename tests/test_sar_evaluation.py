@@ -4,6 +4,7 @@ from pathlib import Path
 import subprocess
 import sys
 
+import cv2
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
@@ -81,3 +82,15 @@ def test_statistics_logging_and_plot(sar_pair, tmp_path, caplog):
     subprocess.run([sys.executable, 'scripts/plot_sar_metrics.py', str(output_dir)], check=True)
     for metric in ('psnr', 'ssim'):
         assert (output_dir / f'frame_position_{metric}.png').stat().st_size > 0
+
+
+def test_saved_restorations_match_metric_pixels(sar_pair, tmp_path):
+    dataset = build_dataset(sar_pair)
+    evaluate(KnownRestoration(), DataLoader(dataset, batch_size=1), tmp_path,
+             logging.getLogger('sar_images'), save_img=True)
+    assert len(list((tmp_path / 'restored').rglob('*.png'))) == len(dataset)
+    for sample in dataset:
+        path = tmp_path / 'restored' / sample['sequence_name'] / f'{sample["frame_idx"]:03d}.png'
+        saved = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
+        assert saved.shape == (512, 512) and saved.dtype == np.uint8
+        np.testing.assert_array_equal(saved, tensor2img(sample['lq'] * 0.9))
