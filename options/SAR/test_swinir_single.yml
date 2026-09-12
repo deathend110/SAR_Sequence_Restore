@@ -1,0 +1,47 @@
+# 独立 SAR 评估；通过 --force_yml path:pretrain_network_g=... 选择检查点。
+name: swinir_sar_single
+model_type: SwinIRModel
+scale: 1
+num_gpu: 1
+manual_seed: 42
+
+datasets:
+  test:
+    name: sar_test
+    type: SARSingleDataset
+    dataroot_lq: /data/cjz/SAR_Transformer/dataset_range_2dsft/range_2d_sft_qh2p5_ql1p5_s1_fr0p9_fa0p5_phi0_lp0p99_hp99p9_roi600_eb64/LQ
+    dataroot_gt: /data/cjz/SAR_Transformer/dataset_range_2dsft/range_2d_sft_qh2p5_ql1p5_s1_fr0p9_fa0p5_phi0_lp0p99_hp99p9_roi600_eb64/GT
+    split_file: docs/splits/sar_single_seed42/test.txt
+
+network_g:
+  type: SwinIR
+  upscale: 1
+  in_chans: 1
+  img_size: 128
+  window_size: 8
+  img_range: 1.0
+  depths: [6, 6, 6, 6, 6, 6]
+  embed_dim: 180
+  num_heads: [6, 6, 6, 6, 6, 6]
+  mlp_ratio: 2
+  upsampler: ~
+  resi_connection: 1conv
+
+path:
+  pretrain_network_g: experiments/swinir_sar_single/models/net_g_latest.pth
+  strict_load_g: true
+  param_key_g: params
+
+val:
+  save_img: false
+  pbar: false
+  suffix: ~
+  metrics:
+    psnr:
+      type: calculate_psnr
+      crop_border: 0
+      test_y_channel: false
+    ssim:
+      type: calculate_ssim
+      crop_border: 0
+      test_y_channel: false
