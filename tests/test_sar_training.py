@@ -82,7 +82,7 @@ def test_full_dp_train_validate_resume(arch, tmp_path):
                 torch.testing.assert_close(value.cpu(), expected['state'][param_id][key].cpu(), rtol=0, atol=0)
     assert restored.schedulers[0].state_dict() == resume_state['schedulers'][0]
     restored.update_learning_rate(4, warmup_iter=-1)
-    assert restored.optimizer_g.param_groups[0]['lr'] == pytest.approx(1.732e-4 * 0.5)
+    assert restored.optimizer_g.param_groups[0]['lr'] == pytest.approx(opt['train']['optim_g']['lr'] * 0.5)
     restored.feed_data(batch)
     restored.optimize_parameters(4)
     assert math.isfinite(restored.log_dict['l_pix'])
@@ -97,4 +97,13 @@ def test_swinir_ddp_train_validate_resume(tmp_path):
     subprocess.run([
         sys.executable, '-m', 'torch.distributed.run', '--standalone', '--nproc_per_node=2',
         str(root / 'tests/swinir_ddp_worker.py'), '--output', str(tmp_path),
+    ], cwd=root, check=True)
+
+
+@pytest.mark.skipif(os.environ.get('SAR_GPU_SMOKE') != '1', reason='Set SAR_GPU_SMOKE=1 for full two-GPU verification.')
+def test_hint_ddp_train_validate_resume(tmp_path):
+    root = Path(__file__).resolve().parents[1]
+    subprocess.run([
+        sys.executable, '-m', 'torch.distributed.run', '--standalone', '--nproc_per_node=2',
+        str(root / 'tests/hint_ddp_worker.py'), '--output', str(tmp_path),
     ], cwd=root, check=True)

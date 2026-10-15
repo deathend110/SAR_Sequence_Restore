@@ -1,8 +1,10 @@
 # 在项目根目录运行；CUDA_VISIBLE_DEVICES=0,1，官方 BasicSR DDP。
 name: hint_sar_single
-model_type: SRModel
+model_type: HINTModel
 scale: 1
 num_gpu: 2
+# 首步空缓存跳过部分调制模块，允许 DDP 正确归约动态参与计算的参数。
+find_unused_parameters: true
 manual_seed: 42
 final_test_opt: options/SAR/test_hint_single.yml
 

@@ -1,6 +1,6 @@
 # 训练正常结束后的独立 SAR 测试；使用最终权重并保存恢复图。
 name: hint_sar_single
-model_type: SRModel
+model_type: HINTModel
 scale: 1
 num_gpu: 1
 manual_seed: 42

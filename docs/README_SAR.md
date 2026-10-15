@@ -34,7 +34,7 @@ uv run --no-sync python -c 'import basicsr, torch; print(basicsr.__file__); prin
 | 日志／保存／验证 | SwinIR 每 267／6667／6667 步；HINT 每 134／3334／3334 步 |
 | EMA／warmup | 关闭 |
 
-两份配置共用数据划分与指标口径，保留各自现有训练预算。SwinIR 使用 `SwinIRModel`；HINT 使用 `SRModel`。学习率的更新和恢复沿用 BasicSR 原生语义。
+两份配置共用数据划分与指标口径，保留各自现有训练预算。SwinIR 使用 `SwinIRModel`；HINT 使用 `HINTModel`（继承原生 `SRModel`，仅适配验证前向与分片验证）。学习率的更新和恢复沿用 BasicSR 原生语义。
 
 ## 启动训练
 
@@ -79,11 +79,13 @@ tail -f logs/swinir.console.log
 
 训练结果分别写入 `experiments/swinir_sar_single/`、`experiments/hint_sar_single/`：`models/` 保存网络，`training_states/` 保存优化器和 scheduler，日志位于实验目录，TensorBoard 位于 `tb_logger/<实验名>/`。验证只汇总恢复 PSNR/SSIM，不逐图打印、不保存恢复图片。每次验证会暂停训练，仅处理固定的 738 张验证图。
 
-SwinIR 的训练内验证由各个 DDP rank 按样本索引交错分片，双卡各处理 369 张，每卡 batch=1，不补齐或重复样本。验证前向直接使用 DDP 内部网络；结束时归约指标总和及实际样本数，按全部帧等权计算 PSNR/SSIM，然后各卡继续训练。rank 0 记录验证开始、结束、总耗时和汇总指标，NCCL 超时设置不变。
+SwinIR 与 HINT 的训练内验证共用分片逻辑，由各个 DDP rank 按样本索引交错分片，双卡各处理 369 张，每卡 batch=1，不补齐或重复样本。验证前向直接使用 DDP 内部网络；结束时归约指标总和及实际样本数，按全部帧等权计算 PSNR/SSIM，然后各卡继续训练。rank 0 记录验证开始、结束、总耗时和汇总指标，NCCL 超时设置不变。
 
 SwinIR 的非预设尺寸掩码直接在 GPU 生成，同尺寸各层、各张图共享两张运行时掩码（512×512 时约 128 MiB）。缓存不进入检查点或 DDP buffer 同步，尺寸或设备变化时重建；128×128 训练尺寸仍使用原有 buffer。默认 CPU 单线程即可受益，无需提高线程数。
 
-HINT 保留原有 `SRModel` 验证行为：仅 rank 0 执行 738 张图的验证，其他 rank 会进入下一训练步等待同步，长验证仍可能触发 NCCL 超时。HINT 使用新验证列表，但保持 rank 0 顺序验证与原持久缓存机制。
+HINT 使用 `HINTModel`，验证前向绕过 DDP 包装器，各 rank 完成自己的分片后统一归约指标，再继续训练。配置顶层启用 `find_unused_parameters: true`：首步 `qv_cache=None` 时部分缓存调制参数不参与计算，后续步骤启用这些参数，DDP 按实际计算图归约梯度。
+
+HINT 各 rank 的持久缓存继续沿各自验证分片顺序更新，不在验证前后 reset，不在 rank 间同步；验证后保留缓存进入训练。由于缓存依赖输入顺序，双卡分片验证与独立单卡测试的缓存轨迹不同，应分别记录指标；最终测试仍使用单卡、固定顺序、空缓存开始。
 
 ## 停止和续训
 
@@ -154,10 +156,10 @@ uv run --no-sync python -m pytest -o addopts='' \
   tests/test_sar_dataset.py tests/test_sar_evaluation.py tests/test_sar_final_test.py -q
 ```
 
-SwinIR 的 padding、EMA 选择、模式恢复和掩码复用可在 CPU 上检查：
+SwinIR 的 padding、模式恢复和掩码复用，以及 HINT 的 EMA 选择、模式恢复与持久状态，可在 CPU 上检查：
 
 ```bash
-uv run --no-sync python -m pytest -o addopts='' tests/test_swinir_model.py -q
+uv run --no-sync python -m pytest -o addopts='' tests/test_swinir_model.py tests/test_hint_model.py -q
 ```
 
 HINT 等价测试默认读取同级 `/data/cjz/HINT/basicsr/models/archs/HINT_arch.py`；也可通过 `HINT_REFERENCE_PATH` 指定。该文件只用于迁移测试，不是运行依赖；没有参考文件时该项跳过。
@@ -166,10 +168,10 @@ HINT 等价测试默认读取同级 `/data/cjz/HINT/basicsr/models/archs/HINT_ar
 
 ```bash
 CUDA_VISIBLE_DEVICES=0,1 SAR_GPU_SMOKE=1 uv run --no-sync python -m pytest \
-  -o addopts='' tests/test_sar_training.py tests/test_sar_final_test.py -k "swinir or ddp_completion" -q -s
+  -o addopts='' tests/test_sar_training.py tests/test_sar_final_test.py -k "swinir or hint_ddp or ddp_completion" -q -s
 ```
 
-该检查使用真实数据、总 batch 6 和完整网络。SwinIR 测试实际通过 `torchrun` 启动两个 DDP 进程，检查奇数样本、空分片、重复验证、单卡指标对照、验证后继续训练和原生保存恢复；HINT 保留原有 DataParallel 短流程，不代表 HINT 的 DDP 验证已通过。上述命令只运行 SwinIR DDP 短流程与临时数据的训练完成后自动测试；最终测试集不参与验收。
+该检查使用真实训练/验证数据与完整网络，通过 `torchrun` 启动两个 DDP 进程；SwinIR 总 batch 6，HINT 总 batch 12。SwinIR 检查奇数样本、空分片、重复验证和单卡指标对照；HINT 检查首步空缓存的动态参数、奇数样本与空分片，并从各 rank 的相同缓存快照重算对应分片指标。两者均检查验证后继续训练、两卡参数一致及原生保存恢复；恢复后的 HINT 从空缓存继续训练。还包含临时数据的训练完成后自动测试，最终测试集不参与验收。
 
 使用已有完整检查点验证完整验证集（以下以第 6667 步为例，先确认 GPU 0、1 空闲）：
 
@@ -185,3 +187,5 @@ CUDA_VISIBLE_DEVICES=0,1 OMP_NUM_THREADS=1 uv run --no-sync torchrun --standalon
 2026-09-12 验收使用临时短训的完整 SwinIR 检查点，评估性能和输出一致性：默认 `OMP_NUM_THREADS=1` 下，单图平均耗时从 4.62 秒降为 0.85 秒（约 5.4 倍加速）；128×128、512×512、需 padding 的 509×501 输入均与修改前逐元素一致，CPU/GPU 迁移及检查点格式检查通过。动态掩码共占 128 MiB。
 
 双 RTX 4090 完整验证 738 张图耗时 315.91 秒（5 分 16 秒），吞吐 2.34 张/秒，每卡峰值已分配显存约 2.89 GiB；随后成功继续训练，两卡参数完全一致。15 项 CPU 检查、SwinIR DDP 短流程及真实训练入口的自动测试流程通过。最终测试集未参与本次验收。
+
+2026-10-15 HINT DDP 修复验收：使用物理 GPU 2、3、完整 HINT 和 global batch 12，通过首步空缓存训练、后续训练、3 张奇数分片与 1 张空分片验证、按缓存快照重算指标、验证后两卡参数一致、原生保存恢复及恢复后空缓存训练。20 项 CPU 检查通过，1 项 GPU 检查按条件跳过；HINT DDP 短流程、SwinIR DDP 回归和真实训练入口的自动测试均通过。正式训练未启动，最终测试集未参与本次验收。
