@@ -14,6 +14,7 @@ results/*
 tb_logger/*
 wandb/*
 tmp/*
+docs/evaluations/*
 
 docs/api
 scripts/__init__.py
@@ -32,6 +33,7 @@ version.py
 *.gif
 *.pth
 *.zip
+*.csv
 
 # template
 
@@ -39,6 +41,7 @@ version.py
 __pycache__/
 *.py[cod]
 *$py.class
+docs/.syncthing.Define.md.tmp
 
 # C extensions
 *.so
