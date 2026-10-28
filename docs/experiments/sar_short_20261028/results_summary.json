@@ -1,0 +1,3491 @@
+{
+  "provenance": {
+    "git_head": "ee8c808be00f0ae1fe7b8f3285c26d836ad92f7a",
+    "checkpoint_sha256": {
+      "experiments/swinir_sar_single/models/net_g_493358.pth": "d57ae5cc9a6185f0d810be97ef5327d323a4c39f90f2c5f704d3566d1ec8c59a",
+      "experiments/hint_sar_single_archived_20261021_151605/models/net_g_813496.pth": "3202e2b7b3e34aca8a25246289f644c6e6e1e06b1d3aa7c5f5e11781fc01fc69"
+    },
+    "subsets": {
+      "val": [
+        "bangkok_rstart_000001_cstart_000011137",
+        "city1_histeq_rstart_000301_cstart_000007977",
+        "city2_histeq_rstart_005101_cstart_000001537",
+        "filed_rstart_000901_cstart_000002305",
+        "port_rstart_001801_cstart_000013377",
+        "sar_figure_rstart_000301_cstart_000004993",
+        "suburb_rstart_004801_cstart_000003457"
+      ],
+      "test": [
+        "bangkok_rstart_003301_cstart_000008449",
+        "city1_histeq_rstart_002401_cstart_000002305",
+        "city2_histeq_rstart_000301_cstart_000003073",
+        "filed_rstart_007201_cstart_000008065",
+        "port_rstart_004201_cstart_000001153",
+        "sar_figure_rstart_001801_cstart_000003457",
+        "suburb_rstart_000901_cstart_000011137"
+      ]
+    }
+  },
+  "jobs": [
+    {
+      "name": "baseline_swinir",
+      "returncode": 0,
+      "seconds": 67.00750838802196,
+      "command": [
+        "/data/cjz/SAR_Sequence_Restore/.venv/bin/python",
+        "-m",
+        "torch.distributed.run",
+        "--standalone",
+        "--nproc_per_node=2",
+        "/data/cjz/SAR_Sequence_Restore/docs/experiments/sar_short_20261028/run_check.py",
+        "--phase",
+        "baseline",
+        "--model",
+        "swinir"
+      ],
+      "ended": "2026-10-28T15:50:45.290780+08:00"
+    },
+    {
+      "name": "baseline_hint",
+      "returncode": 0,
+      "seconds": 30.289120066910982,
+      "command": [
+        "/data/cjz/SAR_Sequence_Restore/.venv/bin/python",
+        "-m",
+        "torch.distributed.run",
+        "--standalone",
+        "--nproc_per_node=2",
+        "/data/cjz/SAR_Sequence_Restore/docs/experiments/sar_short_20261028/run_check.py",
+        "--phase",
+        "baseline",
+        "--model",
+        "hint"
+      ],
+      "ended": "2026-10-28T15:51:15.580697+08:00"
+    },
+    {
+      "name": "finetune_swinir",
+      "returncode": 0,
+      "seconds": 317.37413882510737,
+      "command": [
+        "/data/cjz/SAR_Sequence_Restore/.venv/bin/python",
+        "-m",
+        "torch.distributed.run",
+        "--standalone",
+        "--nproc_per_node=2",
+        "/data/cjz/SAR_Sequence_Restore/docs/experiments/sar_short_20261028/run_check.py",
+        "--phase",
+        "finetune",
+        "--model",
+        "swinir",
+        "--steps",
+        "400"
+      ],
+      "ended": "2026-10-28T15:56:32.955724+08:00"
+    },
+    {
+      "name": "finetune_hint",
+      "returncode": 0,
+      "seconds": 159.4977996898815,
+      "command": [
+        "/data/cjz/SAR_Sequence_Restore/.venv/bin/python",
+        "-m",
+        "torch.distributed.run",
+        "--standalone",
+        "--nproc_per_node=2",
+        "/data/cjz/SAR_Sequence_Restore/docs/experiments/sar_short_20261028/run_check.py",
+        "--phase",
+        "finetune",
+        "--model",
+        "hint",
+        "--steps",
+        "200"
+      ],
+      "ended": "2026-10-28T15:59:12.454620+08:00"
+    },
+    {
+      "name": "batch_swinir_b3",
+      "returncode": 0,
+      "seconds": 29.587219106964767,
+      "command": [
+        "/data/cjz/SAR_Sequence_Restore/.venv/bin/python",
+        "-m",
+        "torch.distributed.run",
+        "--standalone",
+        "--nproc_per_node=2",
+        "/data/cjz/SAR_Sequence_Restore/docs/experiments/sar_short_20261028/run_check.py",
+        "--phase",
+        "batch",
+        "--model",
+        "swinir",
+        "--batch",
+        "3",
+        "--steps",
+        "50"
+      ],
+      "ended": "2026-10-28T15:59:42.042891+08:00"
+    },
+    {
+      "name": "batch_swinir_b4",
+      "returncode": 1,
+      "seconds": 10.746554053854197,
+      "command": [
+        "/data/cjz/SAR_Sequence_Restore/.venv/bin/python",
+        "-m",
+        "torch.distributed.run",
+        "--standalone",
+        "--nproc_per_node=2",
+        "/data/cjz/SAR_Sequence_Restore/docs/experiments/sar_short_20261028/run_check.py",
+        "--phase",
+        "batch",
+        "--model",
+        "swinir",
+        "--batch",
+        "4",
+        "--steps",
+        "50"
+      ],
+      "ended": "2026-10-28T15:59:52.790563+08:00"
+    },
+    {
+      "name": "batch_swinir_b6",
+      "returncode": 1,
+      "seconds": 11.197512225015089,
+      "command": [
+        "/data/cjz/SAR_Sequence_Restore/.venv/bin/python",
+        "-m",
+        "torch.distributed.run",
+        "--standalone",
+        "--nproc_per_node=2",
+        "/data/cjz/SAR_Sequence_Restore/docs/experiments/sar_short_20261028/run_check.py",
+        "--phase",
+        "batch",
+        "--model",
+        "swinir",
+        "--batch",
+        "6",
+        "--steps",
+        "50"
+      ],
+      "ended": "2026-10-28T16:00:03.989195+08:00"
+    },
+    {
+      "name": "batch_hint_b6",
+      "returncode": 0,
+      "seconds": 35.056190581060946,
+      "command": [
+        "/data/cjz/SAR_Sequence_Restore/.venv/bin/python",
+        "-m",
+        "torch.distributed.run",
+        "--standalone",
+        "--nproc_per_node=2",
+        "/data/cjz/SAR_Sequence_Restore/docs/experiments/sar_short_20261028/run_check.py",
+        "--phase",
+        "batch",
+        "--model",
+        "hint",
+        "--batch",
+        "6",
+        "--steps",
+        "50"
+      ],
+      "ended": "2026-10-28T16:00:39.046552+08:00"
+    },
+    {
+      "name": "batch_hint_b8",
+      "returncode": 1,
+      "seconds": 12.25076360697858,
+      "command": [
+        "/data/cjz/SAR_Sequence_Restore/.venv/bin/python",
+        "-m",
+        "torch.distributed.run",
+        "--standalone",
+        "--nproc_per_node=2",
+        "/data/cjz/SAR_Sequence_Restore/docs/experiments/sar_short_20261028/run_check.py",
+        "--phase",
+        "batch",
+        "--model",
+        "hint",
+        "--batch",
+        "8",
+        "--steps",
+        "50"
+      ],
+      "ended": "2026-10-28T16:00:51.298507+08:00"
+    },
+    {
+      "name": "batch_hint_b10",
+      "returncode": 1,
+      "seconds": 11.949206541059539,
+      "command": [
+        "/data/cjz/SAR_Sequence_Restore/.venv/bin/python",
+        "-m",
+        "torch.distributed.run",
+        "--standalone",
+        "--nproc_per_node=2",
+        "/data/cjz/SAR_Sequence_Restore/docs/experiments/sar_short_20261028/run_check.py",
+        "--phase",
+        "batch",
+        "--model",
+        "hint",
+        "--batch",
+        "10",
+        "--steps",
+        "50"
+      ],
+      "ended": "2026-10-28T16:01:03.248954+08:00"
+    },
+    {
+      "name": "warmup_hint_w-1",
+      "returncode": 0,
+      "seconds": 236.43846781505272,
+      "command": [
+        "/data/cjz/SAR_Sequence_Restore/.venv/bin/python",
+        "-m",
+        "torch.distributed.run",
+        "--standalone",
+        "--nproc_per_node=2",
+        "/data/cjz/SAR_Sequence_Restore/docs/experiments/sar_short_20261028/run_check.py",
+        "--phase",
+        "warmup",
+        "--model",
+        "hint",
+        "--warmup",
+        "-1",
+        "--steps",
+        "400"
+      ],
+      "ended": "2026-10-28T16:04:59.688737+08:00"
+    },
+    {
+      "name": "warmup_hint_w3000",
+      "returncode": 0,
+      "seconds": 231.7381787430495,
+      "command": [
+        "/data/cjz/SAR_Sequence_Restore/.venv/bin/python",
+        "-m",
+        "torch.distributed.run",
+        "--standalone",
+        "--nproc_per_node=2",
+        "/data/cjz/SAR_Sequence_Restore/docs/experiments/sar_short_20261028/run_check.py",
+        "--phase",
+        "warmup",
+        "--model",
+        "hint",
+        "--warmup",
+        "3000",
+        "--steps",
+        "400"
+      ],
+      "ended": "2026-10-28T16:08:51.428242+08:00"
+    },
+    {
+      "name": "baseline_hint_repeat",
+      "returncode": 0,
+      "seconds": 29.740730526857078,
+      "command": [
+        "/data/cjz/SAR_Sequence_Restore/.venv/bin/python",
+        "-m",
+        "torch.distributed.run",
+        "--standalone",
+        "--nproc_per_node=2",
+        "/data/cjz/SAR_Sequence_Restore/docs/experiments/sar_short_20261028/run_check.py",
+        "--phase",
+        "baseline",
+        "--model",
+        "hint",
+        "--label",
+        "baseline_hint_repeat"
+      ],
+      "ended": "2026-10-28T16:09:38.314572+08:00"
+    },
+    {
+      "name": "audit_warmup_hint_w-1",
+      "returncode": 0,
+      "seconds": 13.743116548052058,
+      "command": [
+        "/data/cjz/SAR_Sequence_Restore/.venv/bin/python",
+        "-m",
+        "torch.distributed.run",
+        "--standalone",
+        "--nproc_per_node=2",
+        "/data/cjz/SAR_Sequence_Restore/docs/experiments/sar_short_20261028/run_check.py",
+        "--phase",
+        "warmup",
+        "--model",
+        "hint",
+        "--warmup",
+        "-1",
+        "--steps",
+        "4",
+        "--burnin",
+        "0",
+        "--audit-first",
+        "--label",
+        "audit_warmup_hint_w-1"
+      ],
+      "ended": "2026-10-28T16:12:45.551213+08:00"
+    },
+    {
+      "name": "audit_warmup_hint_w3000",
+      "returncode": 0,
+      "seconds": 14.144182941876352,
+      "command": [
+        "/data/cjz/SAR_Sequence_Restore/.venv/bin/python",
+        "-m",
+        "torch.distributed.run",
+        "--standalone",
+        "--nproc_per_node=2",
+        "/data/cjz/SAR_Sequence_Restore/docs/experiments/sar_short_20261028/run_check.py",
+        "--phase",
+        "warmup",
+        "--model",
+        "hint",
+        "--warmup",
+        "3000",
+        "--steps",
+        "4",
+        "--burnin",
+        "0",
+        "--audit-first",
+        "--label",
+        "audit_warmup_hint_w3000"
+      ],
+      "ended": "2026-10-28T16:12:59.696077+08:00"
+    },
+    {
+      "name": "audit_deterministic_hint_w-1",
+      "returncode": 0,
+      "seconds": 12.443871493916959,
+      "command": [
+        "/data/cjz/SAR_Sequence_Restore/.venv/bin/python",
+        "-m",
+        "torch.distributed.run",
+        "--standalone",
+        "--nproc_per_node=2",
+        "/data/cjz/SAR_Sequence_Restore/docs/experiments/sar_short_20261028/run_check.py",
+        "--phase",
+        "warmup",
+        "--model",
+        "hint",
+        "--warmup",
+        "-1",
+        "--steps",
+        "4",
+        "--burnin",
+        "0",
+        "--audit-first",
+        "--deterministic",
+        "--label",
+        "audit_deterministic_hint_w-1"
+      ],
+      "ended": "2026-10-28T16:14:06.887518+08:00"
+    },
+    {
+      "name": "audit_deterministic_hint_w3000",
+      "returncode": 0,
+      "seconds": 13.244920362951234,
+      "command": [
+        "/data/cjz/SAR_Sequence_Restore/.venv/bin/python",
+        "-m",
+        "torch.distributed.run",
+        "--standalone",
+        "--nproc_per_node=2",
+        "/data/cjz/SAR_Sequence_Restore/docs/experiments/sar_short_20261028/run_check.py",
+        "--phase",
+        "warmup",
+        "--model",
+        "hint",
+        "--warmup",
+        "3000",
+        "--steps",
+        "4",
+        "--burnin",
+        "0",
+        "--audit-first",
+        "--deterministic",
+        "--label",
+        "audit_deterministic_hint_w3000"
+      ],
+      "ended": "2026-10-28T16:14:20.133181+08:00"
+    },
+    {
+      "name": "controlled_warmup_hint_w-1",
+      "returncode": 0,
+      "seconds": 356.2559743199963,
+      "command": [
+        "/data/cjz/SAR_Sequence_Restore/.venv/bin/python",
+        "-m",
+        "torch.distributed.run",
+        "--standalone",
+        "--nproc_per_node=2",
+        "/data/cjz/SAR_Sequence_Restore/docs/experiments/sar_short_20261028/run_check.py",
+        "--phase",
+        "warmup",
+        "--model",
+        "hint",
+        "--warmup",
+        "-1",
+        "--steps",
+        "400",
+        "--deterministic",
+        "--label",
+        "controlled_warmup_hint_w-1"
+      ],
+      "ended": "2026-10-28T16:21:16.488438+08:00"
+    },
+    {
+      "name": "controlled_warmup_hint_w3000",
+      "returncode": 0,
+      "seconds": 419.1969613209367,
+      "command": [
+        "/data/cjz/SAR_Sequence_Restore/.venv/bin/python",
+        "-m",
+        "torch.distributed.run",
+        "--standalone",
+        "--nproc_per_node=2",
+        "/data/cjz/SAR_Sequence_Restore/docs/experiments/sar_short_20261028/run_check.py",
+        "--phase",
+        "warmup",
+        "--model",
+        "hint",
+        "--warmup",
+        "3000",
+        "--steps",
+        "400",
+        "--deterministic",
+        "--label",
+        "controlled_warmup_hint_w3000"
+      ],
+      "ended": "2026-10-28T16:28:15.686218+08:00"
+    }
+  ],
+  "results": {
+    "baseline_swinir": {
+      "evaluations": [
+        {
+          "input_psnr": 20.887391354617503,
+          "input_ssim": 0.6773187655064629,
+          "psnr": 25.167262985596558,
+          "ssim": 0.8035097275436519,
+          "tag": "baseline_swinir",
+          "split": "val",
+          "frames": 63,
+          "seconds": 30.927636763080955,
+          "per_scene": {
+            "bangkok": {
+              "psnr": 25.63654167057961,
+              "ssim": 0.7876388535048418
+            },
+            "city1_histeq": {
+              "psnr": 22.8802918773183,
+              "ssim": 0.757208454597783
+            },
+            "city2_histeq": {
+              "psnr": 25.73640235064164,
+              "ssim": 0.7939085249035277
+            },
+            "filed": {
+              "psnr": 23.781380179108258,
+              "ssim": 0.7952789230724425
+            },
+            "port": {
+              "psnr": 33.228186286054516,
+              "ssim": 0.8882135053155416
+            },
+            "sar_figure": {
+              "psnr": 22.79301886898239,
+              "ssim": 0.8013111289989675
+            },
+            "suburb": {
+              "psnr": 22.115019666491182,
+              "ssim": 0.8010087024124597
+            }
+          },
+          "per_frame": {
+            "0": {
+              "psnr": 25.460315867686006,
+              "ssim": 0.8002161133208309
+            },
+            "1": {
+              "psnr": 25.577215819638724,
+              "ssim": 0.8018459313979109
+            },
+            "2": {
+              "psnr": 25.636540987580467,
+              "ssim": 0.8032150007194969
+            },
+            "3": {
+              "psnr": 25.536605759358256,
+              "ssim": 0.8053341224392571
+            },
+            "4": {
+              "psnr": 25.2000432982684,
+              "ssim": 0.8067545614668326
+            },
+            "5": {
+              "psnr": 24.980877376110946,
+              "ssim": 0.80574467980195
+            },
+            "6": {
+              "psnr": 24.69128478581143,
+              "ssim": 0.8039478119596521
+            },
+            "7": {
+              "psnr": 24.66222273758245,
+              "ssim": 0.8036296951494378
+            },
+            "8": {
+              "psnr": 24.760260238332332,
+              "ssim": 0.8008996316374991
+            }
+          }
+        },
+        {
+          "input_psnr": 21.109770050392672,
+          "input_ssim": 0.7504475982245332,
+          "psnr": 23.057678462778064,
+          "ssim": 0.7799893043977444,
+          "tag": "baseline_swinir",
+          "split": "test",
+          "frames": 63,
+          "seconds": 27.242256679106504,
+          "per_scene": {
+            "bangkok": {
+              "psnr": 22.901489923229533,
+              "ssim": 0.7564659143512544
+            },
+            "city1_histeq": {
+              "psnr": 24.14617418539222,
+              "ssim": 0.790997356437264
+            },
+            "city2_histeq": {
+              "psnr": 24.52439693032261,
+              "ssim": 0.7784128105214279
+            },
+            "filed": {
+              "psnr": 25.740372953890287,
+              "ssim": 0.8236111071034031
+            },
+            "port": {
+              "psnr": 23.617084301478787,
+              "ssim": 0.8064617955700074
+            },
+            "sar_figure": {
+              "psnr": 18.277311823617193,
+              "ssim": 0.7208259612718776
+            },
+            "suburb": {
+              "psnr": 22.196919121515812,
+              "ssim": 0.783150185528976
+            }
+          },
+          "per_frame": {
+            "0": {
+              "psnr": 23.23567360540911,
+              "ssim": 0.7801325569300602
+            },
+            "1": {
+              "psnr": 22.981944371247213,
+              "ssim": 0.7817622611596365
+            },
+            "2": {
+              "psnr": 22.967678857639044,
+              "ssim": 0.7812651449590388
+            },
+            "3": {
+              "psnr": 22.902281749443777,
+              "ssim": 0.7762583841735866
+            },
+            "4": {
+              "psnr": 23.094092673258945,
+              "ssim": 0.7782415759737366
+            },
+            "5": {
+              "psnr": 23.166203779005716,
+              "ssim": 0.7772331138314198
+            },
+            "6": {
+              "psnr": 23.114172364135868,
+              "ssim": 0.7782163488463576
+            },
+            "7": {
+              "psnr": 23.07361955551016,
+              "ssim": 0.7819321948924177
+            },
+            "8": {
+              "psnr": 22.983439209352742,
+              "ssim": 0.7848621588134455
+            }
+          }
+        }
+      ]
+    },
+    "baseline_hint": {
+      "evaluations": [
+        {
+          "input_psnr": 20.887391354617503,
+          "input_ssim": 0.6773187655064629,
+          "psnr": 25.512387026035487,
+          "ssim": 0.8101168492651358,
+          "tag": "baseline_hint",
+          "split": "val",
+          "frames": 63,
+          "seconds": 13.51241577300243,
+          "per_scene": {
+            "bangkok": {
+              "psnr": 25.85224523197018,
+              "ssim": 0.794142997725148
+            },
+            "city1_histeq": {
+              "psnr": 23.273536213100396,
+              "ssim": 0.768739601923559
+            },
+            "city2_histeq": {
+              "psnr": 26.576777217354508,
+              "ssim": 0.7967073327018153
+            },
+            "filed": {
+              "psnr": 23.955520459546296,
+              "ssim": 0.8032520810285424
+            },
+            "port": {
+              "psnr": 33.15843330215236,
+              "ssim": 0.887975404914815
+            },
+            "sar_figure": {
+              "psnr": 23.460516385447963,
+              "ssim": 0.8095642397625544
+            },
+            "suburb": {
+              "psnr": 22.309680372676702,
+              "ssim": 0.8104362867995163
+            }
+          },
+          "per_frame": {
+            "0": {
+              "psnr": 25.69433751188482,
+              "ssim": 0.8052071098145979
+            },
+            "1": {
+              "psnr": 25.89067396823547,
+              "ssim": 0.8069219114517642
+            },
+            "2": {
+              "psnr": 25.994697506625048,
+              "ssim": 0.8084690604464561
+            },
+            "3": {
+              "psnr": 25.897149123019286,
+              "ssim": 0.809258880813435
+            },
+            "4": {
+              "psnr": 25.61436507442991,
+              "ssim": 0.8114820026152032
+            },
+            "5": {
+              "psnr": 25.318316220942595,
+              "ssim": 0.8123545221367945
+            },
+            "6": {
+              "psnr": 25.07995751239474,
+              "ssim": 0.8135383353810146
+            },
+            "7": {
+              "psnr": 24.999945374242284,
+              "ssim": 0.8126965049609723
+            },
+            "8": {
+              "psnr": 25.122040942545244,
+              "ssim": 0.811123315765984
+            }
+          }
+        },
+        {
+          "input_psnr": 21.109770050392672,
+          "input_ssim": 0.7504475982245332,
+          "psnr": 23.989723921819312,
+          "ssim": 0.8000013232450532,
+          "tag": "baseline_hint",
+          "split": "test",
+          "frames": 63,
+          "seconds": 8.980818358017132,
+          "per_scene": {
+            "bangkok": {
+              "psnr": 23.34666848289625,
+              "ssim": 0.7740552316443625
+            },
+            "city1_histeq": {
+              "psnr": 25.77636625830343,
+              "ssim": 0.7982977262127435
+            },
+            "city2_histeq": {
+              "psnr": 24.70913473022295,
+              "ssim": 0.7804082507116544
+            },
+            "filed": {
+              "psnr": 26.057320619198183,
+              "ssim": 0.8374922421823059
+            },
+            "port": {
+              "psnr": 24.6069667313851,
+              "ssim": 0.8081705631366959
+            },
+            "sar_figure": {
+              "psnr": 21.09016151739577,
+              "ssim": 0.81160982208211
+            },
+            "suburb": {
+              "psnr": 22.341449113333493,
+              "ssim": 0.7899754267454999
+            }
+          },
+          "per_frame": {
+            "0": {
+              "psnr": 24.25600332892463,
+              "ssim": 0.8012185922875573
+            },
+            "1": {
+              "psnr": 24.16428910912116,
+              "ssim": 0.803873438559637
+            },
+            "2": {
+              "psnr": 24.158038659538484,
+              "ssim": 0.8035424595466732
+            },
+            "3": {
+              "psnr": 24.19528240484135,
+              "ssim": 0.8018615344802207
+            },
+            "4": {
+              "psnr": 24.190951369544685,
+              "ssim": 0.8004997035706393
+            },
+            "5": {
+              "psnr": 24.02518681088788,
+              "ssim": 0.7982058694133806
+            },
+            "6": {
+              "psnr": 23.7887355375742,
+              "ssim": 0.7968453482654435
+            },
+            "7": {
+              "psnr": 23.630171514670412,
+              "ssim": 0.7966312305948361
+            },
+            "8": {
+              "psnr": 23.498856561270987,
+              "ssim": 0.7973337324870914
+            }
+          }
+        }
+      ]
+    },
+    "baseline_hint_repeat": {
+      "evaluations": [
+        {
+          "input_psnr": 20.887391354617503,
+          "input_ssim": 0.6773187655064629,
+          "psnr": 25.51256625641242,
+          "ssim": 0.8101167093528454,
+          "tag": "baseline_hint_repeat",
+          "split": "val",
+          "frames": 63,
+          "seconds": 13.080548210069537,
+          "per_scene": {
+            "bangkok": {
+              "psnr": 25.852281013220523,
+              "ssim": 0.7941251584982001
+            },
+            "city1_histeq": {
+              "psnr": 23.273357744758243,
+              "ssim": 0.7687289959190841
+            },
+            "city2_histeq": {
+              "psnr": 26.576512180931672,
+              "ssim": 0.7967119189192179
+            },
+            "filed": {
+              "psnr": 23.955072685585698,
+              "ssim": 0.8032360091603459
+            },
+            "port": {
+              "psnr": 33.159784062966,
+              "ssim": 0.8879798053450496
+            },
+            "sar_figure": {
+              "psnr": 23.46102401246263,
+              "ssim": 0.8095801853872373
+            },
+            "suburb": {
+              "psnr": 22.309932094962182,
+              "ssim": 0.810454892240783
+            }
+          },
+          "per_frame": {
+            "0": {
+              "psnr": 25.694333067288873,
+              "ssim": 0.8052028021204737
+            },
+            "1": {
+              "psnr": 25.88782221389505,
+              "ssim": 0.8069065591351038
+            },
+            "2": {
+              "psnr": 25.993261750093797,
+              "ssim": 0.8084490440591334
+            },
+            "3": {
+              "psnr": 25.897101112492553,
+              "ssim": 0.8092648223610265
+            },
+            "4": {
+              "psnr": 25.619497752588494,
+              "ssim": 0.8115099461181507
+            },
+            "5": {
+              "psnr": 25.318033685827935,
+              "ssim": 0.8123488627794665
+            },
+            "6": {
+              "psnr": 25.081141913349217,
+              "ssim": 0.8135445124109254
+            },
+            "7": {
+              "psnr": 24.99901327286923,
+              "ssim": 0.812681157814209
+            },
+            "8": {
+              "psnr": 25.122891539306615,
+              "ssim": 0.8111426773771199
+            }
+          }
+        },
+        {
+          "input_psnr": 21.109770050392672,
+          "input_ssim": 0.7504475982245332,
+          "psnr": 23.989667330888327,
+          "ssim": 0.7999980802655716,
+          "tag": "baseline_hint_repeat",
+          "split": "test",
+          "frames": 63,
+          "seconds": 8.899145804112777,
+          "per_scene": {
+            "bangkok": {
+              "psnr": 23.346817956726554,
+              "ssim": 0.7740399180524206
+            },
+            "city1_histeq": {
+              "psnr": 25.776338439653177,
+              "ssim": 0.7983138022222148
+            },
+            "city2_histeq": {
+              "psnr": 24.709172484342982,
+              "ssim": 0.7804070466821766
+            },
+            "filed": {
+              "psnr": 26.057409770523154,
+              "ssim": 0.8375005987855327
+            },
+            "port": {
+              "psnr": 24.607178817163103,
+              "ssim": 0.8081632137957508
+            },
+            "sar_figure": {
+              "psnr": 21.089513648762846,
+              "ssim": 0.8115863169769081
+            },
+            "suburb": {
+              "psnr": 22.341240199046467,
+              "ssim": 0.7899756653439974
+            }
+          },
+          "per_frame": {
+            "0": {
+              "psnr": 24.256027824933685,
+              "ssim": 0.8012392277452184
+            },
+            "1": {
+              "psnr": 24.16419360159449,
+              "ssim": 0.8038785385321764
+            },
+            "2": {
+              "psnr": 24.15806373846397,
+              "ssim": 0.8035432493452195
+            },
+            "3": {
+              "psnr": 24.19498711488074,
+              "ssim": 0.8018496095792947
+            },
+            "4": {
+              "psnr": 24.19111321612019,
+              "ssim": 0.8004966975345774
+            },
+            "5": {
+              "psnr": 24.024113865395726,
+              "ssim": 0.7981740640692493
+            },
+            "6": {
+              "psnr": 23.78890318998896,
+              "ssim": 0.7968338592372067
+            },
+            "7": {
+              "psnr": 23.630721632125667,
+              "ssim": 0.7966411152873445
+            },
+            "8": {
+              "psnr": 23.4988817944915,
+              "ssim": 0.7973263610598574
+            }
+          }
+        }
+      ]
+    },
+    "finetune_swinir": {
+      "tag": "finetune_swinir",
+      "steps": 400,
+      "batch_per_gpu": 3,
+      "world_size": 2,
+      "mean_step_seconds": 0.3616930858691772,
+      "median_step_seconds": 0.35980600502807647,
+      "samples_per_second": 16.5886499753832,
+      "peak_allocated_gib": 19.359652519226074,
+      "wall_seconds": 254.3741818089038,
+      "evaluations": [
+        {
+          "input_psnr": 20.887391354617503,
+          "input_ssim": 0.6773187655064629,
+          "psnr": 25.167262985596558,
+          "ssim": 0.8035097275436519,
+          "tag": "finetune_swinir_step0",
+          "split": "val",
+          "frames": 63,
+          "seconds": 27.42288670898415,
+          "per_scene": {
+            "bangkok": {
+              "psnr": 25.63654167057961,
+              "ssim": 0.7876388535048418
+            },
+            "city1_histeq": {
+              "psnr": 22.8802918773183,
+              "ssim": 0.757208454597783
+            },
+            "city2_histeq": {
+              "psnr": 25.73640235064164,
+              "ssim": 0.7939085249035277
+            },
+            "filed": {
+              "psnr": 23.781380179108258,
+              "ssim": 0.7952789230724425
+            },
+            "port": {
+              "psnr": 33.228186286054516,
+              "ssim": 0.8882135053155416
+            },
+            "sar_figure": {
+              "psnr": 22.79301886898239,
+              "ssim": 0.8013111289989675
+            },
+            "suburb": {
+              "psnr": 22.115019666491182,
+              "ssim": 0.8010087024124597
+            }
+          },
+          "per_frame": {
+            "0": {
+              "psnr": 25.460315867686006,
+              "ssim": 0.8002161133208309
+            },
+            "1": {
+              "psnr": 25.577215819638724,
+              "ssim": 0.8018459313979109
+            },
+            "2": {
+              "psnr": 25.636540987580467,
+              "ssim": 0.8032150007194969
+            },
+            "3": {
+              "psnr": 25.536605759358256,
+              "ssim": 0.8053341224392571
+            },
+            "4": {
+              "psnr": 25.2000432982684,
+              "ssim": 0.8067545614668326
+            },
+            "5": {
+              "psnr": 24.980877376110946,
+              "ssim": 0.80574467980195
+            },
+            "6": {
+              "psnr": 24.69128478581143,
+              "ssim": 0.8039478119596521
+            },
+            "7": {
+              "psnr": 24.66222273758245,
+              "ssim": 0.8036296951494378
+            },
+            "8": {
+              "psnr": 24.760260238332332,
+              "ssim": 0.8008996316374991
+            }
+          }
+        },
+        {
+          "input_psnr": 20.887391354617503,
+          "input_ssim": 0.6773187655064629,
+          "psnr": 25.11194321713119,
+          "ssim": 0.8036041369898252,
+          "tag": "finetune_swinir_step100",
+          "split": "val",
+          "frames": 63,
+          "seconds": 26.538936755154282,
+          "per_scene": {
+            "bangkok": {
+              "psnr": 25.667912221056383,
+              "ssim": 0.7878458737123671
+            },
+            "city1_histeq": {
+              "psnr": 22.930397856605456,
+              "ssim": 0.7597229032376387
+            },
+            "city2_histeq": {
+              "psnr": 25.77103859933035,
+              "ssim": 0.7950982508582748
+            },
+            "filed": {
+              "psnr": 23.71429935004863,
+              "ssim": 0.7954541739998641
+            },
+            "port": {
+              "psnr": 32.90963668521627,
+              "ssim": 0.8779463132486139
+            },
+            "sar_figure": {
+              "psnr": 22.621147882389625,
+              "ssim": 0.804435305799465
+            },
+            "suburb": {
+              "psnr": 22.16916992527164,
+              "ssim": 0.8047261380725529
+            }
+          },
+          "per_frame": {
+            "0": {
+              "psnr": 25.402937718536748,
+              "ssim": 0.7997964650746232
+            },
+            "1": {
+              "psnr": 25.495349879091894,
+              "ssim": 0.8011978888548974
+            },
+            "2": {
+              "psnr": 25.56152161201455,
+              "ssim": 0.8025604039488614
+            },
+            "3": {
+              "psnr": 25.425027167902332,
+              "ssim": 0.8041924267519241
+            },
+            "4": {
+              "psnr": 25.112369703443992,
+              "ssim": 0.8060579536229502
+            },
+            "5": {
+              "psnr": 24.900925544355623,
+              "ssim": 0.8054597175958894
+            },
+            "6": {
+              "psnr": 24.64126178808115,
+              "ssim": 0.8047219605854937
+            },
+            "7": {
+              "psnr": 24.673188817564153,
+              "ssim": 0.8053878291614233
+            },
+            "8": {
+              "psnr": 24.79490672319029,
+              "ssim": 0.8030625873123641
+            }
+          }
+        },
+        {
+          "input_psnr": 20.887391354617503,
+          "input_ssim": 0.6773187655064629,
+          "psnr": 25.181200089003156,
+          "ssim": 0.8049764142614276,
+          "tag": "finetune_swinir_step200",
+          "split": "val",
+          "frames": 63,
+          "seconds": 26.50474959402345,
+          "per_scene": {
+            "bangkok": {
+              "psnr": 25.67978879302792,
+              "ssim": 0.7892347031305564
+            },
+            "city1_histeq": {
+              "psnr": 22.92180648562943,
+              "ssim": 0.7592298028552383
+            },
+            "city2_histeq": {
+              "psnr": 25.91873787201347,
+              "ssim": 0.7961121012785307
+            },
+            "filed": {
+              "psnr": 23.684613232429683,
+              "ssim": 0.794558321855521
+            },
+            "port": {
+              "psnr": 33.34190059973477,
+              "ssim": 0.8891903504806644
+            },
+            "sar_figure": {
+              "psnr": 22.60690978299942,
+              "ssim": 0.8033833718885925
+            },
+            "suburb": {
+              "psnr": 22.11464385718741,
+              "ssim": 0.8031262483408919
+            }
+          },
+          "per_frame": {
+            "0": {
+              "psnr": 25.4269804951081,
+              "ssim": 0.8007273621327842
+            },
+            "1": {
+              "psnr": 25.542494666751566,
+              "ssim": 0.802276743864554
+            },
+            "2": {
+              "psnr": 25.629970462655468,
+              "ssim": 0.8036902552096876
+            },
+            "3": {
+              "psnr": 25.5295610476463,
+              "ssim": 0.8058441355494596
+            },
+            "4": {
+              "psnr": 25.23621681724347,
+              "ssim": 0.8080294908481572
+            },
+            "5": {
+              "psnr": 25.009323894364226,
+              "ssim": 0.8075989198608227
+            },
+            "6": {
+              "psnr": 24.715261418419427,
+              "ssim": 0.8063359475455002
+            },
+            "7": {
+              "psnr": 24.705132846037465,
+              "ssim": 0.8063156729946057
+            },
+            "8": {
+              "psnr": 24.835859152802403,
+              "ssim": 0.8039692003472796
+            }
+          }
+        },
+        {
+          "input_psnr": 20.887391354617503,
+          "input_ssim": 0.6773187655064629,
+          "psnr": 25.150664750673645,
+          "ssim": 0.8051138214771467,
+          "tag": "finetune_swinir_step300",
+          "split": "val",
+          "frames": 63,
+          "seconds": 26.491705257911235,
+          "per_scene": {
+            "bangkok": {
+              "psnr": 25.674803348395837,
+              "ssim": 0.7910356963303932
+            },
+            "city1_histeq": {
+              "psnr": 22.82775802340795,
+              "ssim": 0.7568957991505711
+            },
+            "city2_histeq": {
+              "psnr": 26.026058932299385,
+              "ssim": 0.7957972969672923
+            },
+            "filed": {
+              "psnr": 23.77006545900913,
+              "ssim": 0.7970503375444867
+            },
+            "port": {
+              "psnr": 32.96610535295312,
+              "ssim": 0.8887925508493304
+            },
+            "sar_figure": {
+              "psnr": 22.63299884889968,
+              "ssim": 0.802077767732945
+            },
+            "suburb": {
+              "psnr": 22.156863289750415,
+              "ssim": 0.8041473017650086
+            }
+          },
+          "per_frame": {
+            "0": {
+              "psnr": 25.4003932756874,
+              "ssim": 0.8010329165791941
+            },
+            "1": {
+              "psnr": 25.517621212834534,
+              "ssim": 0.8027715231917801
+            },
+            "2": {
+              "psnr": 25.60336938147588,
+              "ssim": 0.8043447387877755
+            },
+            "3": {
+              "psnr": 25.522117152082306,
+              "ssim": 0.8068716901398251
+            },
+            "4": {
+              "psnr": 25.208233519383548,
+              "ssim": 0.8086318963480592
+            },
+            "5": {
+              "psnr": 24.985221868081542,
+              "ssim": 0.80778889051616
+            },
+            "6": {
+              "psnr": 24.69127825067107,
+              "ssim": 0.8061823648466533
+            },
+            "7": {
+              "psnr": 24.664993181568146,
+              "ssim": 0.8056625694902694
+            },
+            "8": {
+              "psnr": 24.762754914278382,
+              "ssim": 0.8027378033946041
+            }
+          }
+        },
+        {
+          "input_psnr": 20.887391354617503,
+          "input_ssim": 0.6773187655064629,
+          "psnr": 25.177440362977237,
+          "ssim": 0.8059574312835359,
+          "tag": "finetune_swinir_step400",
+          "split": "val",
+          "frames": 63,
+          "seconds": 26.53505471581593,
+          "per_scene": {
+            "bangkok": {
+              "psnr": 25.628288795449862,
+              "ssim": 0.7899448386786362
+            },
+            "city1_histeq": {
+              "psnr": 22.98453708318778,
+              "ssim": 0.7602005913989178
+            },
+            "city2_histeq": {
+              "psnr": 25.84054256034369,
+              "ssim": 0.7949705197272565
+            },
+            "filed": {
+              "psnr": 23.78671902385778,
+              "ssim": 0.7978063025851446
+            },
+            "port": {
+              "psnr": 33.39287859040548,
+              "ssim": 0.8873220795681955
+            },
+            "sar_figure": {
+              "psnr": 22.38415373450224,
+              "ssim": 0.8047069669323897
+            },
+            "suburb": {
+              "psnr": 22.224962753093813,
+              "ssim": 0.8067507200942097
+            }
+          },
+          "per_frame": {
+            "0": {
+              "psnr": 25.458709399306766,
+              "ssim": 0.801829889671012
+            },
+            "1": {
+              "psnr": 25.537794190683456,
+              "ssim": 0.8031022784427828
+            },
+            "2": {
+              "psnr": 25.602658366087933,
+              "ssim": 0.8045463984199019
+            },
+            "3": {
+              "psnr": 25.471956746380464,
+              "ssim": 0.806329679857029
+            },
+            "4": {
+              "psnr": 25.179641049026127,
+              "ssim": 0.8083718381532
+            },
+            "5": {
+              "psnr": 24.979438819400134,
+              "ssim": 0.8080745259867808
+            },
+            "6": {
+              "psnr": 24.729825814702462,
+              "ssim": 0.8075901359059492
+            },
+            "7": {
+              "psnr": 24.75026120710155,
+              "ssim": 0.8079687207563125
+            },
+            "8": {
+              "psnr": 24.886677674106227,
+              "ssim": 0.805803414358853
+            }
+          }
+        }
+      ],
+      "best_psnr_step": 200,
+      "checkpoint": "/data/cjz/SAR_Sequence_Restore/experiments/sar_short_20261028/models/finetune_swinir_best.pth",
+      "test": {
+        "input_psnr": 21.109770050392672,
+        "input_ssim": 0.7504475982245332,
+        "psnr": 23.079926553213017,
+        "ssim": 0.783697451912326,
+        "tag": "finetune_swinir_selected",
+        "split": "test",
+        "frames": 63,
+        "seconds": 26.466152435867116,
+        "per_scene": {
+          "bangkok": {
+            "psnr": 22.83572376609543,
+            "ssim": 0.756391873779803
+          },
+          "city1_histeq": {
+            "psnr": 24.034434286392795,
+            "ssim": 0.7910077224394864
+          },
+          "city2_histeq": {
+            "psnr": 24.586393729208133,
+            "ssim": 0.7789719219959387
+          },
+          "filed": {
+            "psnr": 25.836005394767625,
+            "ssim": 0.830000828824828
+          },
+          "port": {
+            "psnr": 23.41203031116746,
+            "ssim": 0.8061964131431876
+          },
+          "sar_figure": {
+            "psnr": 18.65632100107804,
+            "ssim": 0.737906734833181
+          },
+          "suburb": {
+            "psnr": 22.19857738378166,
+            "ssim": 0.785406668369858
+          }
+        },
+        "per_frame": {
+          "0": {
+            "psnr": 23.269611979046136,
+            "ssim": 0.7840293662418756
+          },
+          "1": {
+            "psnr": 22.98952978712697,
+            "ssim": 0.7854855448903212
+          },
+          "2": {
+            "psnr": 22.967092147152783,
+            "ssim": 0.7847711906542296
+          },
+          "3": {
+            "psnr": 22.883615760726546,
+            "ssim": 0.7798882834524414
+          },
+          "4": {
+            "psnr": 23.106677947752683,
+            "ssim": 0.782114748554134
+          },
+          "5": {
+            "psnr": 23.209322538464022,
+            "ssim": 0.7815950383724471
+          },
+          "6": {
+            "psnr": 23.14725758374526,
+            "ssim": 0.782071433962745
+          },
+          "7": {
+            "psnr": 23.118718266248784,
+            "ssim": 0.7854609316512385
+          },
+          "8": {
+            "psnr": 23.02751296865401,
+            "ssim": 0.7878605294315024
+          }
+        }
+      }
+    },
+    "finetune_hint": {
+      "tag": "finetune_hint",
+      "steps": 200,
+      "batch_per_gpu": 6,
+      "world_size": 2,
+      "mean_step_seconds": 0.447519000285109,
+      "median_step_seconds": 0.4424804609734565,
+      "samples_per_second": 26.814503948111575,
+      "peak_allocated_gib": 20.98835325241089,
+      "wall_seconds": 128.40572812291794,
+      "evaluations": [
+        {
+          "input_psnr": 20.887391354617503,
+          "input_ssim": 0.6773187655064629,
+          "psnr": 25.511071848870642,
+          "ssim": 0.810088068918055,
+          "tag": "finetune_hint_step0",
+          "split": "val",
+          "frames": 63,
+          "seconds": 12.905607264023274,
+          "per_scene": {
+            "bangkok": {
+              "psnr": 25.852399928685976,
+              "ssim": 0.7941369126647702
+            },
+            "city1_histeq": {
+              "psnr": 23.273362134184236,
+              "ssim": 0.7687265000750793
+            },
+            "city2_histeq": {
+              "psnr": 26.57651657664463,
+              "ssim": 0.796707598554333
+            },
+            "filed": {
+              "psnr": 23.954987627268977,
+              "ssim": 0.8032396648349649
+            },
+            "port": {
+              "psnr": 33.14971659027895,
+              "ssim": 0.8877961110268002
+            },
+            "sar_figure": {
+              "psnr": 23.460693786041936,
+              "ssim": 0.8095654926228917
+            },
+            "suburb": {
+              "psnr": 22.3098262989898,
+              "ssim": 0.8104442026475456
+            }
+          },
+          "per_frame": {
+            "0": {
+              "psnr": 25.69426469219735,
+              "ssim": 0.8052065207407593
+            },
+            "1": {
+              "psnr": 25.88755321843941,
+              "ssim": 0.8068944333180073
+            },
+            "2": {
+              "psnr": 25.993977139539005,
+              "ssim": 0.8084498523558203
+            },
+            "3": {
+              "psnr": 25.89706461762041,
+              "ssim": 0.8092626652510406
+            },
+            "4": {
+              "psnr": 25.619862861363384,
+              "ssim": 0.811519592908437
+            },
+            "5": {
+              "psnr": 25.317650733282782,
+              "ssim": 0.8123404381556655
+            },
+            "6": {
+              "psnr": 25.080897803504836,
+              "ssim": 0.8135379402279935
+            },
+            "7": {
+              "psnr": 24.999173421770355,
+              "ssim": 0.8126864658788661
+            },
+            "8": {
+              "psnr": 25.10920215211826,
+              "ssim": 0.810894711425905
+            }
+          }
+        },
+        {
+          "input_psnr": 20.887391354617503,
+          "input_ssim": 0.6773187655064629,
+          "psnr": 25.542522274455195,
+          "ssim": 0.8088603606288873,
+          "tag": "finetune_hint_step50",
+          "split": "val",
+          "frames": 63,
+          "seconds": 9.31331456406042,
+          "per_scene": {
+            "bangkok": {
+              "psnr": 25.806205914432503,
+              "ssim": 0.7898655858324445
+            },
+            "city1_histeq": {
+              "psnr": 23.257010183491197,
+              "ssim": 0.766976178453985
+            },
+            "city2_histeq": {
+              "psnr": 26.61515056437909,
+              "ssim": 0.7966716219686408
+            },
+            "filed": {
+              "psnr": 23.849210878207586,
+              "ssim": 0.7992653515899244
+            },
+            "port": {
+              "psnr": 33.56459656659194,
+              "ssim": 0.8932500791111325
+            },
+            "sar_figure": {
+              "psnr": 23.430695079221763,
+              "ssim": 0.8074324181042594
+            },
+            "suburb": {
+              "psnr": 22.274786734862293,
+              "ssim": 0.8085612893418249
+            }
+          },
+          "per_frame": {
+            "0": {
+              "psnr": 25.70724093204702,
+              "ssim": 0.8037165140844179
+            },
+            "1": {
+              "psnr": 25.90525865284265,
+              "ssim": 0.8053802576254412
+            },
+            "2": {
+              "psnr": 26.005885453965785,
+              "ssim": 0.8068246936789644
+            },
+            "3": {
+              "psnr": 25.936888742723674,
+              "ssim": 0.8080904551778663
+            },
+            "4": {
+              "psnr": 25.65475205814121,
+              "ssim": 0.8102727893409808
+            },
+            "5": {
+              "psnr": 25.35216189323572,
+              "ssim": 0.8111824741358751
+            },
+            "6": {
+              "psnr": 25.119546431420037,
+              "ssim": 0.812536864367379
+            },
+            "7": {
+              "psnr": 25.04210269615309,
+              "ssim": 0.8117691242576106
+            },
+            "8": {
+              "psnr": 25.15886360956757,
+              "ssim": 0.8099700729914512
+            }
+          }
+        },
+        {
+          "input_psnr": 20.887391354617503,
+          "input_ssim": 0.6773187655064629,
+          "psnr": 25.475079094104473,
+          "ssim": 0.8079334184474052,
+          "tag": "finetune_hint_step100",
+          "split": "val",
+          "frames": 63,
+          "seconds": 9.104022521991283,
+          "per_scene": {
+            "bangkok": {
+              "psnr": 25.766787685441887,
+              "ssim": 0.7883954544073294
+            },
+            "city1_histeq": {
+              "psnr": 23.25865415973722,
+              "ssim": 0.7672026737834682
+            },
+            "city2_histeq": {
+              "psnr": 26.60967276218094,
+              "ssim": 0.7955695834415697
+            },
+            "filed": {
+              "psnr": 23.79123238460103,
+              "ssim": 0.7983672933933881
+            },
+            "port": {
+              "psnr": 33.19965342014427,
+              "ssim": 0.8895929796924827
+            },
+            "sar_figure": {
+              "psnr": 23.46120929382858,
+              "ssim": 0.8088327708905454
+            },
+            "suburb": {
+              "psnr": 22.23834395279736,
+              "ssim": 0.8075731735230545
+            }
+          },
+          "per_frame": {
+            "0": {
+              "psnr": 25.638734419617077,
+              "ssim": 0.8025539806208174
+            },
+            "1": {
+              "psnr": 25.826041791639376,
+              "ssim": 0.8040014214851536
+            },
+            "2": {
+              "psnr": 25.925507024152996,
+              "ssim": 0.8056035801094854
+            },
+            "3": {
+              "psnr": 25.86811498410788,
+              "ssim": 0.8071879530773537
+            },
+            "4": {
+              "psnr": 25.587530022959015,
+              "ssim": 0.8092001370839711
+            },
+            "5": {
+              "psnr": 25.29596183586231,
+              "ssim": 0.8105949084604908
+            },
+            "6": {
+              "psnr": 25.056797665711365,
+              "ssim": 0.8118431555187654
+            },
+            "7": {
+              "psnr": 24.98749393754262,
+              "ssim": 0.8111732640798124
+            },
+            "8": {
+              "psnr": 25.089530165347572,
+              "ssim": 0.8092423655907989
+            }
+          }
+        },
+        {
+          "input_psnr": 20.887391354617503,
+          "input_ssim": 0.6773187655064629,
+          "psnr": 25.50836234804176,
+          "ssim": 0.8100910379254904,
+          "tag": "finetune_hint_step150",
+          "split": "val",
+          "frames": 63,
+          "seconds": 8.809855511179194,
+          "per_scene": {
+            "bangkok": {
+              "psnr": 25.8506909632881,
+              "ssim": 0.7924668334503826
+            },
+            "city1_histeq": {
+              "psnr": 23.297486997230617,
+              "ssim": 0.7692190909250001
+            },
+            "city2_histeq": {
+              "psnr": 26.60615032492043,
+              "ssim": 0.7969105676221182
+            },
+            "filed": {
+              "psnr": 23.916062596854573,
+              "ssim": 0.8015691308317879
+            },
+            "port": {
+              "psnr": 33.09617215710001,
+              "ssim": 0.8871654828363371
+            },
+            "sar_figure": {
+              "psnr": 23.487158277143465,
+              "ssim": 0.8126088385651885
+            },
+            "suburb": {
+              "psnr": 22.304815119755137,
+              "ssim": 0.8106973212476177
+            }
+          },
+          "per_frame": {
+            "0": {
+              "psnr": 25.692619572611484,
+              "ssim": 0.8047929242098322
+            },
+            "1": {
+              "psnr": 25.878995775583096,
+              "ssim": 0.806258503041618
+            },
+            "2": {
+              "psnr": 25.964372062186232,
+              "ssim": 0.8078221961067354
+            },
+            "3": {
+              "psnr": 25.897135607573567,
+              "ssim": 0.8093547993219276
+            },
+            "4": {
+              "psnr": 25.641213471741818,
+              "ssim": 0.8116113694969231
+            },
+            "5": {
+              "psnr": 25.318522860090116,
+              "ssim": 0.8125345380060995
+            },
+            "6": {
+              "psnr": 25.064260961877807,
+              "ssim": 0.8137211854722869
+            },
+            "7": {
+              "psnr": 25.001132105727656,
+              "ssim": 0.8131494200024744
+            },
+            "8": {
+              "psnr": 25.117008714984074,
+              "ssim": 0.8115744056715161
+            }
+          }
+        },
+        {
+          "input_psnr": 20.887391354617503,
+          "input_ssim": 0.6773187655064629,
+          "psnr": 25.479143323033526,
+          "ssim": 0.8086892046638579,
+          "tag": "finetune_hint_step200",
+          "split": "val",
+          "frames": 63,
+          "seconds": 9.029379307059571,
+          "per_scene": {
+            "bangkok": {
+              "psnr": 25.853925311708267,
+              "ssim": 0.7914043926908031
+            },
+            "city1_histeq": {
+              "psnr": 23.279613102140733,
+              "ssim": 0.7679545964269259
+            },
+            "city2_histeq": {
+              "psnr": 26.6118454796466,
+              "ssim": 0.7968326219018859
+            },
+            "filed": {
+              "psnr": 23.91206111665053,
+              "ssim": 0.800290332451907
+            },
+            "port": {
+              "psnr": 32.919164895833994,
+              "ssim": 0.8854896926254416
+            },
+            "sar_figure": {
+              "psnr": 23.489585156303026,
+              "ssim": 0.8099814386644542
+            },
+            "suburb": {
+              "psnr": 22.28780819895151,
+              "ssim": 0.8088713578855877
+            }
+          },
+          "per_frame": {
+            "0": {
+              "psnr": 25.662910608207678,
+              "ssim": 0.8034401153658844
+            },
+            "1": {
+              "psnr": 25.849713263080996,
+              "ssim": 0.8048319573788614
+            },
+            "2": {
+              "psnr": 25.954004614748413,
+              "ssim": 0.8066258945499863
+            },
+            "3": {
+              "psnr": 25.877206021762586,
+              "ssim": 0.8081270214658762
+            },
+            "4": {
+              "psnr": 25.592981117169707,
+              "ssim": 0.8101370101880934
+            },
+            "5": {
+              "psnr": 25.28204172615539,
+              "ssim": 0.8110607391973849
+            },
+            "6": {
+              "psnr": 25.04309757369801,
+              "ssim": 0.8122809748651978
+            },
+            "7": {
+              "psnr": 24.966310353403287,
+              "ssim": 0.8116128365818065
+            },
+            "8": {
+              "psnr": 25.084024629075653,
+              "ssim": 0.8100862923816303
+            }
+          }
+        }
+      ],
+      "best_psnr_step": 50,
+      "checkpoint": "/data/cjz/SAR_Sequence_Restore/experiments/sar_short_20261028/models/finetune_hint_best.pth",
+      "test": {
+        "input_psnr": 21.109770050392672,
+        "input_ssim": 0.7504475982245332,
+        "psnr": 23.988312883069103,
+        "ssim": 0.7985031091153225,
+        "tag": "finetune_hint_selected",
+        "split": "test",
+        "frames": 63,
+        "seconds": 8.578177271876484,
+        "per_scene": {
+          "bangkok": {
+            "psnr": 23.32430621879552,
+            "ssim": 0.7716280410871538
+          },
+          "city1_histeq": {
+            "psnr": 25.78546330672105,
+            "ssim": 0.7978075363522702
+          },
+          "city2_histeq": {
+            "psnr": 24.707706915896065,
+            "ssim": 0.7785675623323165
+          },
+          "filed": {
+            "psnr": 26.03333311286101,
+            "ssim": 0.835416915491816
+          },
+          "port": {
+            "psnr": 24.629119101120022,
+            "ssim": 0.8063250609702337
+          },
+          "sar_figure": {
+            "psnr": 21.145782263382756,
+            "ssim": 0.8124962080156193
+          },
+          "suburb": {
+            "psnr": 22.292479262707285,
+            "ssim": 0.7872804395578481
+          }
+        },
+        "per_frame": {
+          "0": {
+            "psnr": 24.244335280176095,
+            "ssim": 0.799527454743925
+          },
+          "1": {
+            "psnr": 24.15466894684574,
+            "ssim": 0.8024482547028849
+          },
+          "2": {
+            "psnr": 24.15362267138619,
+            "ssim": 0.8022031260569432
+          },
+          "3": {
+            "psnr": 24.200300569195655,
+            "ssim": 0.8005688500801831
+          },
+          "4": {
+            "psnr": 24.187460982950522,
+            "ssim": 0.7988853712499807
+          },
+          "5": {
+            "psnr": 24.02606636133308,
+            "ssim": 0.7966143928390224
+          },
+          "6": {
+            "psnr": 23.793157016229618,
+            "ssim": 0.7952783284268243
+          },
+          "7": {
+            "psnr": 23.634884501626118,
+            "ssim": 0.7952062777861933
+          },
+          "8": {
+            "psnr": 23.500319617878898,
+            "ssim": 0.7957959261519452
+          }
+        }
+      }
+    },
+    "batch_swinir_b3": {
+      "tag": "batch_swinir_b3",
+      "steps": 50,
+      "batch_per_gpu": 3,
+      "world_size": 2,
+      "mean_step_seconds": 0.36110102356760765,
+      "median_step_seconds": 0.36108482850249857,
+      "samples_per_second": 16.615848774731155,
+      "peak_allocated_gib": 19.359272003173828,
+      "wall_seconds": 20.013778087915853,
+      "evaluations": [],
+      "best_psnr_step": null,
+      "checkpoint": null
+    },
+    "batch_hint_b6": {
+      "tag": "batch_hint_b6",
+      "steps": 50,
+      "batch_per_gpu": 6,
+      "world_size": 2,
+      "mean_step_seconds": 0.4547368434316013,
+      "median_step_seconds": 0.4517403345089406,
+      "samples_per_second": 26.388888811919998,
+      "peak_allocated_gib": 20.97663450241089,
+      "wall_seconds": 25.647489255992696,
+      "evaluations": [],
+      "best_psnr_step": null,
+      "checkpoint": null
+    },
+    "warmup_hint_w-1": {
+      "tag": "warmup_hint_w-1",
+      "steps": 400,
+      "batch_per_gpu": 6,
+      "world_size": 2,
+      "mean_step_seconds": 0.4564315628988716,
+      "median_step_seconds": 0.4524151891237125,
+      "samples_per_second": 26.290907499442053,
+      "peak_allocated_gib": 20.97858762741089,
+      "wall_seconds": 226.71195351704955,
+      "evaluations": [
+        {
+          "input_psnr": 20.887391354617503,
+          "input_ssim": 0.6773187655064629,
+          "psnr": 20.653790489524624,
+          "ssim": 0.6320409442259358,
+          "tag": "warmup_hint_w-1_step100",
+          "split": "val",
+          "frames": 63,
+          "seconds": 13.356424897909164,
+          "per_scene": {
+            "bangkok": {
+              "psnr": 22.28452343088817,
+              "ssim": 0.6733220158964786
+            },
+            "city1_histeq": {
+              "psnr": 21.65985443352569,
+              "ssim": 0.6686677212703328
+            },
+            "city2_histeq": {
+              "psnr": 21.682431769549662,
+              "ssim": 0.6520350101221963
+            },
+            "filed": {
+              "psnr": 22.24866390854784,
+              "ssim": 0.7235672002168957
+            },
+            "port": {
+              "psnr": 13.782454819063268,
+              "ssim": 0.24360220709187771
+            },
+            "sar_figure": {
+              "psnr": 21.76908541034369,
+              "ssim": 0.7165896921675988
+            },
+            "suburb": {
+              "psnr": 21.149519654754076,
+              "ssim": 0.7465027628161709
+            }
+          },
+          "per_frame": {
+            "0": {
+              "psnr": 20.652111131875213,
+              "ssim": 0.6243193887233157
+            },
+            "1": {
+              "psnr": 20.875662975157258,
+              "ssim": 0.6207195316821678
+            },
+            "2": {
+              "psnr": 20.97518832188418,
+              "ssim": 0.6269269364036197
+            },
+            "3": {
+              "psnr": 20.272513956642175,
+              "ssim": 0.6114680637171072
+            },
+            "4": {
+              "psnr": 20.852504240093737,
+              "ssim": 0.6372037825737058
+            },
+            "5": {
+              "psnr": 20.508515743074835,
+              "ssim": 0.6339582248921661
+            },
+            "6": {
+              "psnr": 20.681350302192023,
+              "ssim": 0.648466257457773
+            },
+            "7": {
+              "psnr": 20.31204143520777,
+              "ssim": 0.6421487110753221
+            },
+            "8": {
+              "psnr": 20.75422629959446,
+              "ssim": 0.6431576015082452
+            }
+          }
+        },
+        {
+          "input_psnr": 20.887391354617503,
+          "input_ssim": 0.6773187655064629,
+          "psnr": 21.577049387002315,
+          "ssim": 0.6834449768999508,
+          "tag": "warmup_hint_w-1_step200",
+          "split": "val",
+          "frames": 63,
+          "seconds": 8.987065716879442,
+          "per_scene": {
+            "bangkok": {
+              "psnr": 24.08956695606871,
+              "ssim": 0.7474570400957795
+            },
+            "city1_histeq": {
+              "psnr": 22.255500170272132,
+              "ssim": 0.7156787183532001
+            },
+            "city2_histeq": {
+              "psnr": 23.413100323317803,
+              "ssim": 0.7370121863786833
+            },
+            "filed": {
+              "psnr": 23.34803832035838,
+              "ssim": 0.7749229641733991
+            },
+            "port": {
+              "psnr": 13.965823702041014,
+              "ssim": 0.26420646301184425
+            },
+            "sar_figure": {
+              "psnr": 22.698947350194494,
+              "ssim": 0.7735425287297855
+            },
+            "suburb": {
+              "psnr": 21.268368886763668,
+              "ssim": 0.7712949375569634
+            }
+          },
+          "per_frame": {
+            "0": {
+              "psnr": 21.53889884480281,
+              "ssim": 0.6759364094389169
+            },
+            "1": {
+              "psnr": 21.875698039627274,
+              "ssim": 0.6758544651999348
+            },
+            "2": {
+              "psnr": 21.925536150176274,
+              "ssim": 0.6743687265057206
+            },
+            "3": {
+              "psnr": 21.512647102993466,
+              "ssim": 0.6746200435242236
+            },
+            "4": {
+              "psnr": 21.63780587080916,
+              "ssim": 0.6851478240521819
+            },
+            "5": {
+              "psnr": 21.551113863326687,
+              "ssim": 0.6913634575066899
+            },
+            "6": {
+              "psnr": 21.312952950323854,
+              "ssim": 0.6920540884038048
+            },
+            "7": {
+              "psnr": 21.22411444483871,
+              "ssim": 0.6901270888421661
+            },
+            "8": {
+              "psnr": 21.61467721612259,
+              "ssim": 0.6915326886259184
+            }
+          }
+        },
+        {
+          "input_psnr": 20.887391354617503,
+          "input_ssim": 0.6773187655064629,
+          "psnr": 21.78605583355857,
+          "ssim": 0.6913899172448085,
+          "tag": "warmup_hint_w-1_step300",
+          "split": "val",
+          "frames": 63,
+          "seconds": 8.880445223068818,
+          "per_scene": {
+            "bangkok": {
+              "psnr": 24.782046328198213,
+              "ssim": 0.7502251171538286
+            },
+            "city1_histeq": {
+              "psnr": 21.740166930446975,
+              "ssim": 0.7171738769399779
+            },
+            "city2_histeq": {
+              "psnr": 24.48781734182539,
+              "ssim": 0.75246292281615
+            },
+            "filed": {
+              "psnr": 23.361902097286276,
+              "ssim": 0.7762972168409875
+            },
+            "port": {
+              "psnr": 15.106475146660479,
+              "ssim": 0.3076478768636164
+            },
+            "sar_figure": {
+              "psnr": 22.354843604045037,
+              "ssim": 0.7736121560296143
+            },
+            "suburb": {
+              "psnr": 20.669139386447657,
+              "ssim": 0.762310254069485
+            }
+          },
+          "per_frame": {
+            "0": {
+              "psnr": 21.916854437367522,
+              "ssim": 0.6810551368024002
+            },
+            "1": {
+              "psnr": 22.13670491039313,
+              "ssim": 0.6923284731663906
+            },
+            "2": {
+              "psnr": 22.347889538433886,
+              "ssim": 0.6890075694130939
+            },
+            "3": {
+              "psnr": 22.159560097288843,
+              "ssim": 0.6911139240420697
+            },
+            "4": {
+              "psnr": 21.681012218846366,
+              "ssim": 0.6916383034780206
+            },
+            "5": {
+              "psnr": 21.59184357560608,
+              "ssim": 0.6934839954144342
+            },
+            "6": {
+              "psnr": 21.286223767991125,
+              "ssim": 0.6944500420297094
+            },
+            "7": {
+              "psnr": 21.459024733182922,
+              "ssim": 0.6986495024133187
+            },
+            "8": {
+              "psnr": 21.495389222917293,
+              "ssim": 0.6907823084438395
+            }
+          }
+        },
+        {
+          "input_psnr": 20.887391354617503,
+          "input_ssim": 0.6773187655064629,
+          "psnr": 21.909484375571637,
+          "ssim": 0.6958142914116108,
+          "tag": "warmup_hint_w-1_step400",
+          "split": "val",
+          "frames": 63,
+          "seconds": 9.208668261999264,
+          "per_scene": {
+            "bangkok": {
+              "psnr": 24.864249622127417,
+              "ssim": 0.7622342986844493
+            },
+            "city1_histeq": {
+              "psnr": 22.27711803575856,
+              "ssim": 0.7264152757207557
+            },
+            "city2_histeq": {
+              "psnr": 24.110893472371313,
+              "ssim": 0.7566051566549372
+            },
+            "filed": {
+              "psnr": 23.638195811674375,
+              "ssim": 0.7858643252961907
+            },
+            "port": {
+              "psnr": 14.514283767704288,
+              "ssim": 0.29193383046833116
+            },
+            "sar_figure": {
+              "psnr": 22.653698783882312,
+              "ssim": 0.7739064148123576
+            },
+            "suburb": {
+              "psnr": 21.30795113548321,
+              "ssim": 0.7737407382442547
+            }
+          },
+          "per_frame": {
+            "0": {
+              "psnr": 22.050481564698007,
+              "ssim": 0.6920645442027257
+            },
+            "1": {
+              "psnr": 22.11137008625435,
+              "ssim": 0.6894349272467163
+            },
+            "2": {
+              "psnr": 22.279601436998735,
+              "ssim": 0.693276881459208
+            },
+            "3": {
+              "psnr": 22.362486086799642,
+              "ssim": 0.6957477783019419
+            },
+            "4": {
+              "psnr": 21.875236394625947,
+              "ssim": 0.6934253581449488
+            },
+            "5": {
+              "psnr": 21.67250313240253,
+              "ssim": 0.69644762317588
+            },
+            "6": {
+              "psnr": 21.55092774083133,
+              "ssim": 0.7008291431092143
+            },
+            "7": {
+              "psnr": 21.637542512552407,
+              "ssim": 0.7028686432629526
+            },
+            "8": {
+              "psnr": 21.64521042498181,
+              "ssim": 0.6982337238009103
+            }
+          }
+        }
+      ],
+      "best_psnr_step": 400,
+      "checkpoint": "/data/cjz/SAR_Sequence_Restore/experiments/sar_short_20261028/models/warmup_hint_w-1_best.pth"
+    },
+    "warmup_hint_w3000": {
+      "tag": "warmup_hint_w3000",
+      "steps": 400,
+      "batch_per_gpu": 6,
+      "world_size": 2,
+      "mean_step_seconds": 0.44758051003162297,
+      "median_step_seconds": 0.44171008560806513,
+      "samples_per_second": 26.810818905300774,
+      "peak_allocated_gib": 20.97663450241089,
+      "wall_seconds": 222.58674232615158,
+      "evaluations": [
+        {
+          "input_psnr": 20.887391354617503,
+          "input_ssim": 0.6773187655064629,
+          "psnr": 18.797336080431197,
+          "ssim": 0.5819484909815994,
+          "tag": "warmup_hint_w3000_step100",
+          "split": "val",
+          "frames": 63,
+          "seconds": 12.718153111170977,
+          "per_scene": {
+            "bangkok": {
+              "psnr": 19.678554380448887,
+              "ssim": 0.598902177710394
+            },
+            "city1_histeq": {
+              "psnr": 20.03418604689168,
+              "ssim": 0.630514251315016
+            },
+            "city2_histeq": {
+              "psnr": 20.267002649632172,
+              "ssim": 0.5777982729845786
+            },
+            "filed": {
+              "psnr": 20.024748756474406,
+              "ssim": 0.681294520441759
+            },
+            "port": {
+              "psnr": 12.63157417022629,
+              "ssim": 0.19549675208231185
+            },
+            "sar_figure": {
+              "psnr": 19.6679151744525,
+              "ssim": 0.6827445736050868
+            },
+            "suburb": {
+              "psnr": 19.277371384892447,
+              "ssim": 0.7068888887320489
+            }
+          },
+          "per_frame": {
+            "0": {
+              "psnr": 19.696586227868114,
+              "ssim": 0.5878400602827255
+            },
+            "1": {
+              "psnr": 19.124250271450506,
+              "ssim": 0.5753523438811243
+            },
+            "2": {
+              "psnr": 18.68717910013064,
+              "ssim": 0.555743455519403
+            },
+            "3": {
+              "psnr": 18.800290427342116,
+              "ssim": 0.563421470449754
+            },
+            "4": {
+              "psnr": 17.890829789382558,
+              "ssim": 0.5575683594075908
+            },
+            "5": {
+              "psnr": 18.4969639113673,
+              "ssim": 0.5915823563136969
+            },
+            "6": {
+              "psnr": 19.326116241211427,
+              "ssim": 0.6129743950822532
+            },
+            "7": {
+              "psnr": 18.707797523146365,
+              "ssim": 0.5992600187124184
+            },
+            "8": {
+              "psnr": 18.446011231981753,
+              "ssim": 0.5937939591854279
+            }
+          }
+        },
+        {
+          "input_psnr": 20.887391354617503,
+          "input_ssim": 0.6773187655064629,
+          "psnr": 19.797851353296842,
+          "ssim": 0.6100854622383537,
+          "tag": "warmup_hint_w3000_step200",
+          "split": "val",
+          "frames": 63,
+          "seconds": 8.969866513973102,
+          "per_scene": {
+            "bangkok": {
+              "psnr": 21.39926214760963,
+              "ssim": 0.6472841984872487
+            },
+            "city1_histeq": {
+              "psnr": 20.609859725948553,
+              "ssim": 0.6333615168075839
+            },
+            "city2_histeq": {
+              "psnr": 20.817406368497455,
+              "ssim": 0.6141863846159683
+            },
+            "filed": {
+              "psnr": 21.444508916762146,
+              "ssim": 0.7106175035667254
+            },
+            "port": {
+              "psnr": 13.660402860878868,
+              "ssim": 0.23654585442515957
+            },
+            "sar_figure": {
+              "psnr": 20.608758383447206,
+              "ssim": 0.7050788728245992
+            },
+            "suburb": {
+              "psnr": 20.04476106993404,
+              "ssim": 0.7235239049411917
+            }
+          },
+          "per_frame": {
+            "0": {
+              "psnr": 19.8890402103116,
+              "ssim": 0.6021141016048847
+            },
+            "1": {
+              "psnr": 20.03294296612699,
+              "ssim": 0.6023150174019928
+            },
+            "2": {
+              "psnr": 20.415066778041954,
+              "ssim": 0.6051490339530152
+            },
+            "3": {
+              "psnr": 20.136932648250404,
+              "ssim": 0.6072924015639262
+            },
+            "4": {
+              "psnr": 20.647013185410646,
+              "ssim": 0.6272433005426006
+            },
+            "5": {
+              "psnr": 18.36680119411876,
+              "ssim": 0.5758835750962991
+            },
+            "6": {
+              "psnr": 19.319089300064757,
+              "ssim": 0.6103201360106462
+            },
+            "7": {
+              "psnr": 19.61516710142325,
+              "ssim": 0.6328530913665718
+            },
+            "8": {
+              "psnr": 19.758608795923212,
+              "ssim": 0.6275985026052477
+            }
+          }
+        },
+        {
+          "input_psnr": 20.887391354617503,
+          "input_ssim": 0.6773187655064629,
+          "psnr": 20.510321514641188,
+          "ssim": 0.6355516405303709,
+          "tag": "warmup_hint_w3000_step300",
+          "split": "val",
+          "frames": 63,
+          "seconds": 8.711188378976658,
+          "per_scene": {
+            "bangkok": {
+              "psnr": 22.345875835189013,
+              "ssim": 0.672067663828033
+            },
+            "city1_histeq": {
+              "psnr": 20.92017100211157,
+              "ssim": 0.657727814294262
+            },
+            "city2_histeq": {
+              "psnr": 22.386023887044644,
+              "ssim": 0.6710855510860044
+            },
+            "filed": {
+              "psnr": 21.637173780113926,
+              "ssim": 0.7221817296537112
+            },
+            "port": {
+              "psnr": 14.014510977728483,
+              "ssim": 0.25678878281382783
+            },
+            "sar_figure": {
+              "psnr": 21.37427703698469,
+              "ssim": 0.7231175393190009
+            },
+            "suburb": {
+              "psnr": 20.894218083316005,
+              "ssim": 0.745892402717757
+            }
+          },
+          "per_frame": {
+            "0": {
+              "psnr": 20.65685474477287,
+              "ssim": 0.6332184263709905
+            },
+            "1": {
+              "psnr": 20.96263988231754,
+              "ssim": 0.6411633886248174
+            },
+            "2": {
+              "psnr": 20.22506304720821,
+              "ssim": 0.6087525741699314
+            },
+            "3": {
+              "psnr": 20.080703856975976,
+              "ssim": 0.6134813718197435
+            },
+            "4": {
+              "psnr": 20.290744243217482,
+              "ssim": 0.6246910093549075
+            },
+            "5": {
+              "psnr": 20.793840925449437,
+              "ssim": 0.647079875475704
+            },
+            "6": {
+              "psnr": 20.345146271190025,
+              "ssim": 0.644318226150955
+            },
+            "7": {
+              "psnr": 20.689397537592352,
+              "ssim": 0.6532212683699977
+            },
+            "8": {
+              "psnr": 20.548503123046828,
+              "ssim": 0.6540386244362912
+            }
+          }
+        },
+        {
+          "input_psnr": 20.887391354617503,
+          "input_ssim": 0.6773187655064629,
+          "psnr": 20.912604921205766,
+          "ssim": 0.6504478029500959,
+          "tag": "warmup_hint_w3000_step400",
+          "split": "val",
+          "frames": 63,
+          "seconds": 8.987939871149138,
+          "per_scene": {
+            "bangkok": {
+              "psnr": 23.26605747124885,
+              "ssim": 0.6812083987769102
+            },
+            "city1_histeq": {
+              "psnr": 21.338414388901512,
+              "ssim": 0.6762013014468234
+            },
+            "city2_histeq": {
+              "psnr": 23.437608585049173,
+              "ssim": 0.7028644762622249
+            },
+            "filed": {
+              "psnr": 22.55137788011787,
+              "ssim": 0.7436569565014434
+            },
+            "port": {
+              "psnr": 14.63755953215949,
+              "ssim": 0.28261153564116975
+            },
+            "sar_figure": {
+              "psnr": 21.35282198613188,
+              "ssim": 0.7369841794542854
+            },
+            "suburb": {
+              "psnr": 19.804394604831614,
+              "ssim": 0.7296077725678143
+            }
+          },
+          "per_frame": {
+            "0": {
+              "psnr": 21.265022915219657,
+              "ssim": 0.6475538390469309
+            },
+            "1": {
+              "psnr": 20.93867403464245,
+              "ssim": 0.6376753695794353
+            },
+            "2": {
+              "psnr": 21.752118521196945,
+              "ssim": 0.6615258020299383
+            },
+            "3": {
+              "psnr": 21.64267196964425,
+              "ssim": 0.655474938737543
+            },
+            "4": {
+              "psnr": 20.22455117556683,
+              "ssim": 0.6314578947810043
+            },
+            "5": {
+              "psnr": 20.675925752277067,
+              "ssim": 0.656607725418494
+            },
+            "6": {
+              "psnr": 20.44626648567593,
+              "ssim": 0.6554810353574434
+            },
+            "7": {
+              "psnr": 20.76028012124696,
+              "ssim": 0.6614814426295463
+            },
+            "8": {
+              "psnr": 20.50793331538182,
+              "ssim": 0.6467721789705277
+            }
+          }
+        }
+      ],
+      "best_psnr_step": 400,
+      "checkpoint": "/data/cjz/SAR_Sequence_Restore/experiments/sar_short_20261028/models/warmup_hint_w3000_best.pth"
+    },
+    "controlled_warmup_hint_w-1": {
+      "tag": "controlled_warmup_hint_w-1",
+      "steps": 400,
+      "batch_per_gpu": 6,
+      "world_size": 2,
+      "mean_step_seconds": 0.7185124058879386,
+      "median_step_seconds": 0.6819241869961843,
+      "samples_per_second": 16.701173009212532,
+      "peak_allocated_gib": 18.248111248016357,
+      "wall_seconds": 345.92773345601745,
+      "evaluations": [
+        {
+          "input_psnr": 20.887391354617503,
+          "input_ssim": 0.6773187655064629,
+          "psnr": 20.88649603840648,
+          "ssim": 0.6377285440575959,
+          "tag": "controlled_warmup_hint_w-1_step100",
+          "split": "val",
+          "frames": 63,
+          "seconds": 13.566300088074058,
+          "per_scene": {
+            "bangkok": {
+              "psnr": 23.093231517742193,
+              "ssim": 0.6782464010074325
+            },
+            "city1_histeq": {
+              "psnr": 21.66267796753386,
+              "ssim": 0.676037939988139
+            },
+            "city2_histeq": {
+              "psnr": 22.30730840702859,
+              "ssim": 0.6580243778135701
+            },
+            "filed": {
+              "psnr": 22.09185967292735,
+              "ssim": 0.7119584866870781
+            },
+            "port": {
+              "psnr": 13.917050525732694,
+              "ssim": 0.25196142560242113
+            },
+            "sar_figure": {
+              "psnr": 21.975626027683298,
+              "ssim": 0.7359036828969712
+            },
+            "suburb": {
+              "psnr": 21.157718150197404,
+              "ssim": 0.7519674944075594
+            }
+          },
+          "per_frame": {
+            "0": {
+              "psnr": 20.703137065778183,
+              "ssim": 0.6223870531889213
+            },
+            "1": {
+              "psnr": 21.484247150340288,
+              "ssim": 0.6375663176609461
+            },
+            "2": {
+              "psnr": 21.073475489578236,
+              "ssim": 0.6275524269767764
+            },
+            "3": {
+              "psnr": 21.018983420716324,
+              "ssim": 0.6281489130485205
+            },
+            "4": {
+              "psnr": 20.86396907773584,
+              "ssim": 0.6397444125949401
+            },
+            "5": {
+              "psnr": 20.763988933077098,
+              "ssim": 0.639401372786123
+            },
+            "6": {
+              "psnr": 20.50594387807456,
+              "ssim": 0.6515428056987423
+            },
+            "7": {
+              "psnr": 20.824450804659396,
+              "ssim": 0.6540740587290207
+            },
+            "8": {
+              "psnr": 20.740268525698436,
+              "ssim": 0.6391395358343729
+            }
+          }
+        },
+        {
+          "input_psnr": 20.887391354617503,
+          "input_ssim": 0.6773187655064629,
+          "psnr": 21.495470527693307,
+          "ssim": 0.6802034607510384,
+          "tag": "controlled_warmup_hint_w-1_step200",
+          "split": "val",
+          "frames": 63,
+          "seconds": 13.417822034098208,
+          "per_scene": {
+            "bangkok": {
+              "psnr": 24.416077328930605,
+              "ssim": 0.7369901105833602
+            },
+            "city1_histeq": {
+              "psnr": 21.305251172382818,
+              "ssim": 0.6923352151199096
+            },
+            "city2_histeq": {
+              "psnr": 24.80773061670788,
+              "ssim": 0.7466872017187146
+            },
+            "filed": {
+              "psnr": 22.84176792540104,
+              "ssim": 0.7604156932806201
+            },
+            "port": {
+              "psnr": 15.18339011900651,
+              "ssim": 0.31098739888275884
+            },
+            "sar_figure": {
+              "psnr": 21.77929693691151,
+              "ssim": 0.759864495002128
+            },
+            "suburb": {
+              "psnr": 20.134779594512775,
+              "ssim": 0.7541441106697785
+            }
+          },
+          "per_frame": {
+            "0": {
+              "psnr": 21.77602968440063,
+              "ssim": 0.6764984096401039
+            },
+            "1": {
+              "psnr": 22.082708851517964,
+              "ssim": 0.6825542407886989
+            },
+            "2": {
+              "psnr": 21.8527960967782,
+              "ssim": 0.6669067437011805
+            },
+            "3": {
+              "psnr": 21.843067846098847,
+              "ssim": 0.6764183359667353
+            },
+            "4": {
+              "psnr": 21.445245275940373,
+              "ssim": 0.682904273603576
+            },
+            "5": {
+              "psnr": 21.02833800367679,
+              "ssim": 0.6741466564926129
+            },
+            "6": {
+              "psnr": 21.09114320767519,
+              "ssim": 0.6883421211217067
+            },
+            "7": {
+              "psnr": 20.83163257300469,
+              "ssim": 0.6820028184774974
+            },
+            "8": {
+              "psnr": 21.50827321014708,
+              "ssim": 0.692057546967235
+            }
+          }
+        },
+        {
+          "input_psnr": 20.887391354617503,
+          "input_ssim": 0.6773187655064629,
+          "psnr": 21.575699537857858,
+          "ssim": 0.6811278743659583,
+          "tag": "controlled_warmup_hint_w-1_step300",
+          "split": "val",
+          "frames": 63,
+          "seconds": 13.279609223129228,
+          "per_scene": {
+            "bangkok": {
+              "psnr": 24.407584252150755,
+              "ssim": 0.7370198646559966
+            },
+            "city1_histeq": {
+              "psnr": 21.247002803595596,
+              "ssim": 0.6829081656561221
+            },
+            "city2_histeq": {
+              "psnr": 24.745034460184726,
+              "ssim": 0.746380633298362
+            },
+            "filed": {
+              "psnr": 23.067470778084786,
+              "ssim": 0.7655102620220396
+            },
+            "port": {
+              "psnr": 15.225694305708673,
+              "ssim": 0.3196393863719679
+            },
+            "sar_figure": {
+              "psnr": 21.991417566237867,
+              "ssim": 0.7616744441835404
+            },
+            "suburb": {
+              "psnr": 20.345692599042586,
+              "ssim": 0.7547623643736805
+            }
+          },
+          "per_frame": {
+            "0": {
+              "psnr": 21.8148523899849,
+              "ssim": 0.674729968367992
+            },
+            "1": {
+              "psnr": 22.084180350221498,
+              "ssim": 0.6803315275128947
+            },
+            "2": {
+              "psnr": 21.760037207843748,
+              "ssim": 0.6684162923940081
+            },
+            "3": {
+              "psnr": 22.119306416805887,
+              "ssim": 0.6869810750908139
+            },
+            "4": {
+              "psnr": 21.526388194120504,
+              "ssim": 0.6801099572434234
+            },
+            "5": {
+              "psnr": 21.471521634217826,
+              "ssim": 0.6904684138002191
+            },
+            "6": {
+              "psnr": 21.241454983307182,
+              "ssim": 0.688522395426053
+            },
+            "7": {
+              "psnr": 20.93260095566422,
+              "ssim": 0.6817070739585354
+            },
+            "8": {
+              "psnr": 21.23095370855494,
+              "ssim": 0.6788841654996863
+            }
+          }
+        },
+        {
+          "input_psnr": 20.887391354617503,
+          "input_ssim": 0.6773187655064629,
+          "psnr": 21.92378580403554,
+          "ssim": 0.6919940765282279,
+          "tag": "controlled_warmup_hint_w-1_step400",
+          "split": "val",
+          "frames": 63,
+          "seconds": 14.74425147799775,
+          "per_scene": {
+            "bangkok": {
+              "psnr": 24.69069377501135,
+              "ssim": 0.754729321410384
+            },
+            "city1_histeq": {
+              "psnr": 22.428352228127835,
+              "ssim": 0.7231187903058109
+            },
+            "city2_histeq": {
+              "psnr": 24.0795563124358,
+              "ssim": 0.7553217031965423
+            },
+            "filed": {
+              "psnr": 23.66810804526057,
+              "ssim": 0.7812517199930715
+            },
+            "port": {
+              "psnr": 14.345213734778731,
+              "ssim": 0.2908937335294724
+            },
+            "sar_figure": {
+              "psnr": 22.82066962298781,
+              "ssim": 0.7707715075321521
+            },
+            "suburb": {
+              "psnr": 21.43390690964666,
+              "ssim": 0.7678717597301621
+            }
+          },
+          "per_frame": {
+            "0": {
+              "psnr": 21.96287451455407,
+              "ssim": 0.6834954181088612
+            },
+            "1": {
+              "psnr": 22.256039791296367,
+              "ssim": 0.6898902125420533
+            },
+            "2": {
+              "psnr": 22.360885589647182,
+              "ssim": 0.6923141068391824
+            },
+            "3": {
+              "psnr": 22.03981690115373,
+              "ssim": 0.6893627512934213
+            },
+            "4": {
+              "psnr": 21.753682125251377,
+              "ssim": 0.6898896852408039
+            },
+            "5": {
+              "psnr": 21.67748449397442,
+              "ssim": 0.6905263752627091
+            },
+            "6": {
+              "psnr": 21.76768661596201,
+              "ssim": 0.698025449397249
+            },
+            "7": {
+              "psnr": 21.646872918828304,
+              "ssim": 0.6985428728873752
+            },
+            "8": {
+              "psnr": 21.84872928565238,
+              "ssim": 0.6958998171823959
+            }
+          }
+        }
+      ],
+      "best_psnr_step": 400,
+      "checkpoint": "/data/cjz/SAR_Sequence_Restore/experiments/sar_short_20261028/models/controlled_warmup_hint_w-1_best.pth"
+    },
+    "controlled_warmup_hint_w3000": {
+      "tag": "controlled_warmup_hint_w3000",
+      "steps": 400,
+      "batch_per_gpu": 6,
+      "world_size": 2,
+      "mean_step_seconds": 0.8475407373446685,
+      "median_step_seconds": 0.837281743530184,
+      "samples_per_second": 14.158611464029217,
+      "peak_allocated_gib": 18.248111248016357,
+      "wall_seconds": 408.9017739770934,
+      "evaluations": [
+        {
+          "input_psnr": 20.887391354617503,
+          "input_ssim": 0.6773187655064629,
+          "psnr": 18.820270541397772,
+          "ssim": 0.5831823856078402,
+          "tag": "controlled_warmup_hint_w3000_step100",
+          "split": "val",
+          "frames": 63,
+          "seconds": 15.068019155180082,
+          "per_scene": {
+            "bangkok": {
+              "psnr": 20.708949391561926,
+              "ssim": 0.6104402085521318
+            },
+            "city1_histeq": {
+              "psnr": 19.875058217449308,
+              "ssim": 0.6310663538231441
+            },
+            "city2_histeq": {
+              "psnr": 19.39525573817929,
+              "ssim": 0.561493105774662
+            },
+            "filed": {
+              "psnr": 19.733824871880714,
+              "ssim": 0.6781942176633348
+            },
+            "port": {
+              "psnr": 12.915103606079647,
+              "ssim": 0.2035495996704598
+            },
+            "sar_figure": {
+              "psnr": 19.71527185724399,
+              "ssim": 0.689048099220233
+            },
+            "suburb": {
+              "psnr": 19.39843010738952,
+              "ssim": 0.7084851145509161
+            }
+          },
+          "per_frame": {
+            "0": {
+              "psnr": 19.60796910833297,
+              "ssim": 0.5915528301799019
+            },
+            "1": {
+              "psnr": 18.652009263350095,
+              "ssim": 0.5584622639686542
+            },
+            "2": {
+              "psnr": 18.88095014279728,
+              "ssim": 0.5676992949443757
+            },
+            "3": {
+              "psnr": 18.656361309881905,
+              "ssim": 0.5661323048400243
+            },
+            "4": {
+              "psnr": 19.090284945944344,
+              "ssim": 0.5887512091635824
+            },
+            "5": {
+              "psnr": 18.518956346853646,
+              "ssim": 0.5828756037776124
+            },
+            "6": {
+              "psnr": 18.731081579810667,
+              "ssim": 0.602027620046575
+            },
+            "7": {
+              "psnr": 18.62035853658665,
+              "ssim": 0.596546836072202
+            },
+            "8": {
+              "psnr": 18.62446363902239,
+              "ssim": 0.594593507477634
+            }
+          }
+        },
+        {
+          "input_psnr": 20.887391354617503,
+          "input_ssim": 0.6773187655064629,
+          "psnr": 19.53149601838017,
+          "ssim": 0.6028031874989876,
+          "tag": "controlled_warmup_hint_w3000_step200",
+          "split": "val",
+          "frames": 63,
+          "seconds": 18.915650664130226,
+          "per_scene": {
+            "bangkok": {
+              "psnr": 20.612395616271826,
+              "ssim": 0.6232446549586032
+            },
+            "city1_histeq": {
+              "psnr": 20.81385808765487,
+              "ssim": 0.6417063667149326
+            },
+            "city2_histeq": {
+              "psnr": 20.107781981320002,
+              "ssim": 0.60705074917181
+            },
+            "filed": {
+              "psnr": 20.977396710132187,
+              "ssim": 0.7023934340269382
+            },
+            "port": {
+              "psnr": 13.21313604244547,
+              "ssim": 0.21877069054737822
+            },
+            "sar_figure": {
+              "psnr": 20.889660727114336,
+              "ssim": 0.7058556300073068
+            },
+            "suburb": {
+              "psnr": 20.10624296372251,
+              "ssim": 0.7206007870659435
+            }
+          },
+          "per_frame": {
+            "0": {
+              "psnr": 19.648550175624273,
+              "ssim": 0.6056398814178605
+            },
+            "1": {
+              "psnr": 18.65448584659554,
+              "ssim": 0.5773569115384806
+            },
+            "2": {
+              "psnr": 19.633116553687447,
+              "ssim": 0.5760891101016903
+            },
+            "3": {
+              "psnr": 19.371912620194273,
+              "ssim": 0.5682387017833682
+            },
+            "4": {
+              "psnr": 20.23892155234038,
+              "ssim": 0.6181955242410273
+            },
+            "5": {
+              "psnr": 19.615313791675863,
+              "ssim": 0.6174131584096653
+            },
+            "6": {
+              "psnr": 19.26732789589861,
+              "ssim": 0.61586124589585
+            },
+            "7": {
+              "psnr": 19.72297908913375,
+              "ssim": 0.6318029753906192
+            },
+            "8": {
+              "psnr": 19.630856640271425,
+              "ssim": 0.6146311787123262
+            }
+          }
+        },
+        {
+          "input_psnr": 20.887391354617503,
+          "input_ssim": 0.6773187655064629,
+          "psnr": 20.79555610723493,
+          "ssim": 0.6355318559694635,
+          "tag": "controlled_warmup_hint_w3000_step300",
+          "split": "val",
+          "frames": 63,
+          "seconds": 18.906288689002395,
+          "per_scene": {
+            "bangkok": {
+              "psnr": 22.608862358674035,
+              "ssim": 0.6671514757614279
+            },
+            "city1_histeq": {
+              "psnr": 21.02512981494848,
+              "ssim": 0.652588387855904
+            },
+            "city2_histeq": {
+              "psnr": 22.682159369913546,
+              "ssim": 0.6707247946197692
+            },
+            "filed": {
+              "psnr": 22.059052263686734,
+              "ssim": 0.7083262134684153
+            },
+            "port": {
+              "psnr": 15.083373230593253,
+              "ssim": 0.30230465568318016
+            },
+            "sar_figure": {
+              "psnr": 21.390003205511203,
+              "ssim": 0.7194550265333435
+            },
+            "suburb": {
+              "psnr": 20.720312507317274,
+              "ssim": 0.7281724378642035
+            }
+          },
+          "per_frame": {
+            "0": {
+              "psnr": 20.63947881934772,
+              "ssim": 0.6245181143940972
+            },
+            "1": {
+              "psnr": 21.11170856795261,
+              "ssim": 0.6178454389098993
+            },
+            "2": {
+              "psnr": 20.826627226212956,
+              "ssim": 0.6157269987329111
+            },
+            "3": {
+              "psnr": 21.055072280542646,
+              "ssim": 0.6283452623116229
+            },
+            "4": {
+              "psnr": 20.60661316639276,
+              "ssim": 0.6258079302253134
+            },
+            "5": {
+              "psnr": 20.857486918055482,
+              "ssim": 0.6538786955548754
+            },
+            "6": {
+              "psnr": 21.17331786425441,
+              "ssim": 0.6865792326581832
+            },
+            "7": {
+              "psnr": 20.273082769745848,
+              "ssim": 0.6287876660827908
+            },
+            "8": {
+              "psnr": 20.61661735260994,
+              "ssim": 0.6382973648554765
+            }
+          }
+        },
+        {
+          "input_psnr": 20.887391354617503,
+          "input_ssim": 0.6773187655064629,
+          "psnr": 20.83135412330941,
+          "ssim": 0.6379230230086091,
+          "tag": "controlled_warmup_hint_w3000_step400",
+          "split": "val",
+          "frames": 63,
+          "seconds": 14.814383693039417,
+          "per_scene": {
+            "bangkok": {
+              "psnr": 23.382465704595063,
+              "ssim": 0.6800864864250202
+            },
+            "city1_histeq": {
+              "psnr": 21.277679347371595,
+              "ssim": 0.6716330602311332
+            },
+            "city2_histeq": {
+              "psnr": 23.31112806547979,
+              "ssim": 0.6822592452958225
+            },
+            "filed": {
+              "psnr": 22.049694936580792,
+              "ssim": 0.7088284335801583
+            },
+            "port": {
+              "psnr": 14.9698646429556,
+              "ssim": 0.294984271226901
+            },
+            "sar_figure": {
+              "psnr": 21.12363013376732,
+              "ssim": 0.7122288353361582
+            },
+            "suburb": {
+              "psnr": 19.70501603241569,
+              "ssim": 0.7154408289650706
+            }
+          },
+          "per_frame": {
+            "0": {
+              "psnr": 20.99575907561485,
+              "ssim": 0.6201020021758082
+            },
+            "1": {
+              "psnr": 21.054561738700073,
+              "ssim": 0.6280180122357638
+            },
+            "2": {
+              "psnr": 21.43749044527414,
+              "ssim": 0.6388475543652482
+            },
+            "3": {
+              "psnr": 20.937241333027625,
+              "ssim": 0.6216746910399344
+            },
+            "4": {
+              "psnr": 20.79282460693499,
+              "ssim": 0.6439144698992384
+            },
+            "5": {
+              "psnr": 20.202689631626818,
+              "ssim": 0.6293540177732402
+            },
+            "6": {
+              "psnr": 21.088688517134567,
+              "ssim": 0.6704805900622395
+            },
+            "7": {
+              "psnr": 20.286877068618082,
+              "ssim": 0.6418399322618666
+            },
+            "8": {
+              "psnr": 20.686054692853514,
+              "ssim": 0.6470759372641428
+            }
+          }
+        }
+      ],
+      "best_psnr_step": 400,
+      "checkpoint": "/data/cjz/SAR_Sequence_Restore/experiments/sar_short_20261028/models/controlled_warmup_hint_w3000_best.pth"
+    }
+  },
+  "audits": {
+    "audit_warmup_hint_w-1": {
+      "audits": [
+        {
+          "rank": 0,
+          "initial_weights_sha256": "87c507a70918c5fecce71cf1f341eaa5077e6962b8b72c6d30afed68e266c6b0",
+          "first_batch_sha256": "2566f6d61c770e0dd26ce6fde6de8a62d084b4f9ab7b44e90406ac1f4ad3b7fe",
+          "sequences": [
+            "port_rstart_005401_cstart_000012289",
+            "sar_figure_rstart_001801_cstart_000003841",
+            "sar_figure_rstart_000901_cstart_000000769",
+            "bangkok_rstart_000001_cstart_000008833",
+            "suburb_rstart_002401_cstart_000003073",
+            "filed_rstart_002401_cstart_000000769"
+          ],
+          "frames": [
+            8,
+            8,
+            1,
+            1,
+            4,
+            1
+          ],
+          "step": 1,
+          "loss": 0.25684064626693726,
+          "lr": 0.0003464,
+          "seconds": 3.4733870609197766,
+          "data_seconds": 0.05124986683949828
+        },
+        {
+          "rank": 1,
+          "initial_weights_sha256": "87c507a70918c5fecce71cf1f341eaa5077e6962b8b72c6d30afed68e266c6b0",
+          "first_batch_sha256": "2239279aab39be681070e1ecf0fef195f3c5bfd81e66bc43e1d312c8ed4122ad",
+          "sequences": [
+            "suburb_rstart_000301_cstart_000009217",
+            "port_rstart_004501_cstart_000011521",
+            "city2_histeq_rstart_002401_cstart_000002689",
+            "filed_rstart_005401_cstart_000007681",
+            "bangkok_rstart_000601_cstart_000008833",
+            "suburb_rstart_005101_cstart_000009217"
+          ],
+          "frames": [
+            0,
+            3,
+            6,
+            1,
+            0,
+            8
+          ],
+          "step": 1,
+          "loss": 0.2736371159553528,
+          "lr": 0.0003464,
+          "seconds": 3.473555828910321,
+          "data_seconds": 0.04698642296716571
+        }
+      ]
+    },
+    "audit_warmup_hint_w3000": {
+      "audits": [
+        {
+          "rank": 0,
+          "initial_weights_sha256": "87c507a70918c5fecce71cf1f341eaa5077e6962b8b72c6d30afed68e266c6b0",
+          "first_batch_sha256": "2566f6d61c770e0dd26ce6fde6de8a62d084b4f9ab7b44e90406ac1f4ad3b7fe",
+          "sequences": [
+            "port_rstart_005401_cstart_000012289",
+            "sar_figure_rstart_001801_cstart_000003841",
+            "sar_figure_rstart_000901_cstart_000000769",
+            "bangkok_rstart_000001_cstart_000008833",
+            "suburb_rstart_002401_cstart_000003073",
+            "filed_rstart_002401_cstart_000000769"
+          ],
+          "frames": [
+            8,
+            8,
+            1,
+            1,
+            4,
+            1
+          ],
+          "step": 1,
+          "loss": 0.23843108117580414,
+          "lr": 1.1546666666666667e-07,
+          "seconds": 3.6223289899062365,
+          "data_seconds": 0.010917305946350098
+        },
+        {
+          "rank": 1,
+          "initial_weights_sha256": "87c507a70918c5fecce71cf1f341eaa5077e6962b8b72c6d30afed68e266c6b0",
+          "first_batch_sha256": "2239279aab39be681070e1ecf0fef195f3c5bfd81e66bc43e1d312c8ed4122ad",
+          "sequences": [
+            "suburb_rstart_000301_cstart_000009217",
+            "port_rstart_004501_cstart_000011521",
+            "city2_histeq_rstart_002401_cstart_000002689",
+            "filed_rstart_005401_cstart_000007681",
+            "bangkok_rstart_000601_cstart_000008833",
+            "suburb_rstart_005101_cstart_000009217"
+          ],
+          "frames": [
+            0,
+            3,
+            6,
+            1,
+            0,
+            8
+          ],
+          "step": 1,
+          "loss": 0.23681795597076416,
+          "lr": 1.1546666666666667e-07,
+          "seconds": 3.6226740549318492,
+          "data_seconds": 0.05542825604788959
+        }
+      ]
+    },
+    "audit_deterministic_hint_w-1": {
+      "audits": [
+        {
+          "rank": 0,
+          "initial_weights_sha256": "87c507a70918c5fecce71cf1f341eaa5077e6962b8b72c6d30afed68e266c6b0",
+          "first_batch_sha256": "2566f6d61c770e0dd26ce6fde6de8a62d084b4f9ab7b44e90406ac1f4ad3b7fe",
+          "sequences": [
+            "port_rstart_005401_cstart_000012289",
+            "sar_figure_rstart_001801_cstart_000003841",
+            "sar_figure_rstart_000901_cstart_000000769",
+            "bangkok_rstart_000001_cstart_000008833",
+            "suburb_rstart_002401_cstart_000003073",
+            "filed_rstart_002401_cstart_000000769"
+          ],
+          "frames": [
+            8,
+            8,
+            1,
+            1,
+            4,
+            1
+          ],
+          "step": 1,
+          "loss": 0.3648087978363037,
+          "lr": 0.0003464,
+          "seconds": 2.197580788983032,
+          "data_seconds": 0.04669104004278779
+        },
+        {
+          "rank": 1,
+          "initial_weights_sha256": "87c507a70918c5fecce71cf1f341eaa5077e6962b8b72c6d30afed68e266c6b0",
+          "first_batch_sha256": "2239279aab39be681070e1ecf0fef195f3c5bfd81e66bc43e1d312c8ed4122ad",
+          "sequences": [
+            "suburb_rstart_000301_cstart_000009217",
+            "port_rstart_004501_cstart_000011521",
+            "city2_histeq_rstart_002401_cstart_000002689",
+            "filed_rstart_005401_cstart_000007681",
+            "bangkok_rstart_000601_cstart_000008833",
+            "suburb_rstart_005101_cstart_000009217"
+          ],
+          "frames": [
+            0,
+            3,
+            6,
+            1,
+            0,
+            8
+          ],
+          "step": 1,
+          "loss": 0.33841997385025024,
+          "lr": 0.0003464,
+          "seconds": 2.197820116998628,
+          "data_seconds": 0.047213766956701875
+        }
+      ]
+    },
+    "audit_deterministic_hint_w3000": {
+      "audits": [
+        {
+          "rank": 0,
+          "initial_weights_sha256": "87c507a70918c5fecce71cf1f341eaa5077e6962b8b72c6d30afed68e266c6b0",
+          "first_batch_sha256": "2566f6d61c770e0dd26ce6fde6de8a62d084b4f9ab7b44e90406ac1f4ad3b7fe",
+          "sequences": [
+            "port_rstart_005401_cstart_000012289",
+            "sar_figure_rstart_001801_cstart_000003841",
+            "sar_figure_rstart_000901_cstart_000000769",
+            "bangkok_rstart_000001_cstart_000008833",
+            "suburb_rstart_002401_cstart_000003073",
+            "filed_rstart_002401_cstart_000000769"
+          ],
+          "frames": [
+            8,
+            8,
+            1,
+            1,
+            4,
+            1
+          ],
+          "step": 1,
+          "loss": 0.3648087978363037,
+          "lr": 1.1546666666666667e-07,
+          "seconds": 2.1284774739760906,
+          "data_seconds": 0.04374949005432427
+        },
+        {
+          "rank": 1,
+          "initial_weights_sha256": "87c507a70918c5fecce71cf1f341eaa5077e6962b8b72c6d30afed68e266c6b0",
+          "first_batch_sha256": "2239279aab39be681070e1ecf0fef195f3c5bfd81e66bc43e1d312c8ed4122ad",
+          "sequences": [
+            "suburb_rstart_000301_cstart_000009217",
+            "port_rstart_004501_cstart_000011521",
+            "city2_histeq_rstart_002401_cstart_000002689",
+            "filed_rstart_005401_cstart_000007681",
+            "bangkok_rstart_000601_cstart_000008833",
+            "suburb_rstart_005101_cstart_000009217"
+          ],
+          "frames": [
+            0,
+            3,
+            6,
+            1,
+            0,
+            8
+          ],
+          "step": 1,
+          "loss": 0.33841997385025024,
+          "lr": 1.1546666666666667e-07,
+          "seconds": 2.090287071885541,
+          "data_seconds": 0.055005723843351007
+        }
+      ]
+    }
+  },
+  "warmup_digests": [
+    {
+      "rank": 0,
+      "initial_weights_sha256": "87c507a70918c5fecce71cf1f341eaa5077e6962b8b72c6d30afed68e266c6b0",
+      "first_batch_sha256": "2566f6d61c770e0dd26ce6fde6de8a62d084b4f9ab7b44e90406ac1f4ad3b7fe"
+    },
+    {
+      "rank": 1,
+      "initial_weights_sha256": "87c507a70918c5fecce71cf1f341eaa5077e6962b8b72c6d30afed68e266c6b0",
+      "first_batch_sha256": "2239279aab39be681070e1ecf0fef195f3c5bfd81e66bc43e1d312c8ed4122ad"
+    }
+  ],
+  "verification": {
+    "metric_files": 34,
+    "frames_per_evaluation": 63,
+    "original_checkpoints_unchanged": true,
+    "controlled_first_loss_equal": true
+  }
+}
