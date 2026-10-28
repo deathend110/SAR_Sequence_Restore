@@ -1,0 +1,47 @@
+# 全 Q=2 数据集对比实验；沿用原实验的模型、训练参数和 seed42 数据划分。
+# 训练正常结束后的独立 SAR 测试；使用最终权重并保存恢复图。
+name: hint_sar_single_q2
+model_type: HINTModel
+scale: 1
+num_gpu: 1
+manual_seed: 42
+
+datasets:
+  test:
+    name: sar_test
+    type: SARSingleDataset
+    dataroot_lq: /data/cjz/SAR_Transformer/dataset_range_2dsft/range_2d_sft_q2_s0_fr1p3_fa0p4_phi0_lp0p99_hp99p9_roi600/LQ
+    dataroot_gt: /data/cjz/SAR_Transformer/dataset_range_2dsft/range_2d_sft_q2_s0_fr1p3_fa0p4_phi0_lp0p99_hp99p9_roi600/GT
+    split_file: docs/splits/sar_single_seed42/test.txt
+
+network_g:
+  type: HINT
+  inp_channels: 1
+  out_channels: 1
+  dim: 48
+  num_blocks: [4, 6, 6, 8]
+  num_refinement_blocks: 4
+  heads: [8, 8, 8, 8]
+  ffn_expansion_factor: 2.66
+  bias: false
+  LayerNorm_type: WithBias
+  dual_pixel_task: false
+
+path:
+  pretrain_network_g: experiments/hint_sar_single_q2/models/net_g_latest.pth
+  strict_load_g: true
+  param_key_g: params
+
+val:
+  save_img: true
+  pbar: false
+  suffix: ~
+  metrics:
+    psnr:
+      type: calculate_psnr
+      crop_border: 0
+      test_y_channel: false
+    ssim:
+      type: calculate_ssim
+      crop_border: 0
+      test_y_channel: false
