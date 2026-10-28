@@ -48,7 +48,7 @@ path:
   resume_state: ~
 
 train:
-  total_iter: 2200000
+  total_iter: 800000  # 与 HINT 40 万步保持相同样本曝光量，约 145 个 epoch。
   warmup_iter: -1
   ema_decay: 0
   optim_g:
@@ -58,7 +58,7 @@ train:
     betas: [0.9, 0.999]
   scheduler:
     type: MultiStepLR
-    milestones: [1066667, 1600000, 1866667, 2000000, 2133333]
+    milestones: [400000, 600000, 700000, 760000]  # 随训练预算缩短，提前进入低学习率精调。
     gamma: 0.5
   pixel_opt:
     type: CharbonnierLoss
@@ -67,7 +67,7 @@ train:
     eps: !!float 1e-9
 
 val:
-  val_freq: 6667
+  val_freq: 20000  # 降低完整验证开销，与检查点保存间隔一致。
   save_img: false
   pbar: false
   metrics:
@@ -82,7 +82,7 @@ val:
 
 logger:
   print_freq: 267
-  save_checkpoint_freq: 6667
+  save_checkpoint_freq: 20000
   use_tb_logger: true
   wandb:
     project: ~

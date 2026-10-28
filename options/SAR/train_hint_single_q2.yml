@@ -49,7 +49,7 @@ path:
   resume_state: ~
 
 train:
-  total_iter: 1100000  # global batch 翻倍后，保持总训练样本量不变。
+  total_iter: 400000  # 与 SwinIR 80 万步保持相同样本曝光量，约 145 个 epoch。
   warmup_iter: -1
   ema_decay: 0
   optim_g:
@@ -59,7 +59,7 @@ train:
     betas: [0.9, 0.999]
   scheduler:
     type: MultiStepLR
-    milestones: [533334, 800000, 933334, 1000000, 1066667]
+    milestones: [200000, 300000, 350000, 380000]  # 随训练预算缩短，提前进入低学习率精调。
     gamma: 0.5
   pixel_opt:
     type: CharbonnierLoss
@@ -68,7 +68,7 @@ train:
     eps: !!float 1e-9
 
 val:
-  val_freq: 3334
+  val_freq: 3334  # 验证前向会更新持久缓存，沿用原频率。
   save_img: false
   pbar: false
   metrics:
