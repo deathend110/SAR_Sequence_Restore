@@ -1,6 +1,6 @@
 # SAR_Sequence_Restore 实验使用说明
 
-本工作区以标准 BasicSR 1.4.2 为主框架，提供单比特 SAR 的 SwinIR、HINT 单帧基线。九帧按独立样本训练，保留 sequence 与 F₀～F₈ 信息用于评估。问题定义见 [Define.md](Define.md)，迁移来源与验证见 [迁移记录](migration_record.md)。
+本工作区以标准 BasicSR 1.4.2 为主框架，提供单比特 SAR 的 SwinIR、HINT、UCAN 单帧基线。九帧按独立样本训练，保留 sequence 与 F₀～F₈ 信息用于评估。问题定义见 [Define.md](Define.md)，迁移来源与验证见 [迁移记录](migration_record.md)。UCAN 的原 H/L、全 Q=2 配置、接口差异和检查结果见 [UCAN 接入记录](UCAN_integration.md)。
 
 ## 环境
 
