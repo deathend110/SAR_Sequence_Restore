@@ -2,6 +2,8 @@
 
 实施日期：2026-09-12。新工作区：`/data/cjz/SAR_Sequence_Restore`。
 
+本文件保留 2026-09-12 迁移验收时的参数和结果。当前配置已采用双卡 DDP、独立 val/test 划分，并新增 UCAN；截至 2026-10-30，SwinIR/UCAN 每卡 batch=3、总预算 800000 步，HINT 每卡 batch=6、总预算 400000 步。当前学习率、衰减节点和保存/验证间隔见 [README_SAR.md](README_SAR.md#数据和训练协议)，下文的 DataParallel、220 万步及显存数据属于迁移时记录。
+
 ## 来源与原则
 
 | 来源 | 使用内容 |

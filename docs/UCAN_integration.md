@@ -2,6 +2,8 @@
 
 日期：2026-10-29。
 
+参数核对日期：2026-10-30；三种模型的当前参数总表见 [README_SAR.md](README_SAR.md#数据和训练协议)，执行时以正式 YAML 为准。
+
 ## 接入结论
 
 UCAN 已作为独立的单帧恢复基线接入现有 BasicSR 注册、训练和评估流程。使用官方已有的同分辨率残差恢复分支，输入和输出均为 `[B, 1, H, W]`，不经过超分上采样。该基线逐帧处理全部 9 帧，沿用本仓库 SAR 数据划分和指标协议。
@@ -35,7 +37,7 @@ UCAN 已作为独立的单帧恢复基线接入现有 BasicSR 注册、训练和
 | 原 H/L 数据集 | `options/SAR/train_ucan_single.yml` | `options/SAR/test_ucan_single.yml` | `ucan_sar_single` |
 | 全 Q=2 数据集 | `options/SAR/train_ucan_single_q2.yml` | `options/SAR/test_ucan_single_q2.yml` | `ucan_sar_single_q2` |
 
-训练配置对齐当前 SwinIR：seed42 序列划分、128×128 crop、每卡 batch=3、双卡 global batch=6、800,000 iter、Adam lr=1.732e-4、betas=[0.9,0.999]、CharbonnierLoss、EMA=0，学习率在 400k/600k/700k/760k 衰减，验证和保存间隔 20k。800k 是完整比较的预算模板，本次没有启动该训练。
+训练配置对齐当前 SwinIR：seed42 序列划分、128×128 crop、每卡 batch=3、双卡 global batch=6、每卡 workers=4、800,000 iter、Adam lr=1.732e-4、betas=[0.9,0.999]、weight_decay=0；CharbonnierLoss 的 eps=1e-9、loss_weight=1、reduction=mean。FP32，未启用 AMP，EMA=0、warmup_iter=-1，学习率在 400k/600k/700k/760k 乘以 0.5，日志间隔 267 步，验证和保存间隔 20k。两套数据配置的这些参数相同。800k 对应 480 万个 patch、约 145 个 epoch，是完整比较的预算模板，接入验收没有启动该训练。
 
 保留 SARSingleDataset 的数据读取及增强约定，不加入自然图像 SR 的旋转、翻转或附加损失。训练样本曝光量保持一致后，再用短程 GPU 实测决定是否提高 UCAN batch 并同步调整学习率和 iter。当前配置采用随机初始化，不加载官方 RGB 超分权重。
 
@@ -84,6 +86,6 @@ CUDA_VISIBLE_DEVICES='' OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 \
 
 两个数据集的训练/验证路径及首条序列的 LQ/GT 图像读取均已检查，图像尺寸为 512×512；训练 3,688 条序列，验证 82 条序列，沿用同一 seed42 划分。
 
-当前 4 张 RTX 4090 均有正在运行的任务，本次验证使用 CPU，不启动正式训练。GPU 吞吐、显存峰值及恢复精度将在后续短程实验测量，参数量不直接用作速度估计。官方逐块 NaN/Inf 检查也暂时保留；后续 GPU 性能分析需要关注这些检查触发的主机同步，以及大窗口注意力实际选择的 SDPA 后端。
+接入验收时（2026-10-29），4 张 RTX 4090 均有正在运行的任务，因此使用 CPU 验证，没有启动正式训练。GPU 吞吐、显存峰值及恢复精度将在后续短程实验测量，参数量不直接用作速度估计。官方逐块 NaN/Inf 检查也暂时保留；后续 GPU 性能分析需要关注这些检查触发的主机同步，以及大窗口注意力实际选择的 SDPA 后端。
 
 建议后续顺序：双卡真实数据短程检查与吞吐测量 → 约 1k–5k iter 验证损失趋势和稳定性 → 根据相同样本曝光量安排完整对比。UCAN 的 SR 优势能否迁移到单比特 SAR，应以本数据上的验证集结果判断。

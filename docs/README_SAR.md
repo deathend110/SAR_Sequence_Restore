@@ -12,11 +12,24 @@ uv sync --locked --extra sar
 uv run --no-sync python -c 'import basicsr, torch; print(basicsr.__file__); print(torch.__version__)'
 ```
 
-锁定 Python 3.12、PyTorch 2.6.0+cu124、torchvision 0.21.0、NumPy 1.26.4。BasicSR 以 editable 形式安装到本目录；SwinIR/HINT 不需要编译 BasicSR 的可选 CUDA 扩展。`sar` extra 提供 einops、matplotlib；开发组提供 pytest 及迁移参考测试依赖。
+锁定 Python 3.12、PyTorch 2.6.0+cu124、torchvision 0.21.0、NumPy 1.26.4。BasicSR 以 editable 形式安装到本目录；SwinIR/HINT/UCAN 不需要编译 BasicSR 的可选 CUDA 扩展。`sar` extra 提供 einops、matplotlib；开发组提供 pytest 及迁移参考测试依赖。
 
 ## 数据和训练协议
 
-数据仍位于原仓库的 `dataset_range_2dsft/range_2d_sft_qh2p5_ql1p5_s1_fr0p9_fa0p5_phi0_lp0p99_hp99p9_roi600_eb64/{LQ,GT}`。YAML 中配置绝对数据路径，split 引用新工作区的 `docs/splits/sar_single_seed42/`。迁移机器时修改两种模型的训练、测试 YAML 中数据路径。
+参数核对日期：2026-10-30，以 `options/SAR/` 下当前正式 YAML 为准。三种模型均提供原 H/L 和全 Q=2 两套配置；同一模型的两套配置使用相同训练参数和 seed42 划分，数据根目录与实验名分别设置。
+
+数据位于 `/data/cjz/SAR_Transformer/dataset_range_2dsft/` 下：
+
+- 原 H/L：`range_2d_sft_qh2p5_ql1p5_s1_fr0p9_fa0p5_phi0_lp0p99_hp99p9_roi600_eb64/{LQ,GT}`。
+- 全 Q=2：`range_2d_sft_q2_s0_fr1p3_fa0p4_phi0_lp0p99_hp99p9_roi600/{LQ,GT}`。
+
+YAML 中配置绝对数据路径，split 引用 `docs/splits/sar_single_seed42/`。迁移机器时更新所用训练、测试 YAML 中的数据路径。
+
+| 模型 | 原 H/L 训练／测试 | 全 Q=2 训练／测试 |
+| --- | --- | --- |
+| SwinIR | [训练](../options/SAR/train_swinir_single.yml)／[测试](../options/SAR/test_swinir_single.yml) | [训练](../options/SAR/train_swinir_single_q2.yml)／[测试](../options/SAR/test_swinir_single_q2.yml) |
+| HINT | [训练](../options/SAR/train_hint_single.yml)／[测试](../options/SAR/test_hint_single.yml) | [训练](../options/SAR/train_hint_single_q2.yml)／[测试](../options/SAR/test_hint_single_q2.yml) |
+| UCAN | [训练](../options/SAR/train_ucan_single.yml)／[测试](../options/SAR/test_ucan_single.yml) | [训练](../options/SAR/train_ucan_single_q2.yml)／[测试](../options/SAR/test_ucan_single_q2.yml) |
 
 | 项目 | 设置 |
 | --- | --- |
@@ -26,15 +39,22 @@ uv run --no-sync python -c 'import basicsr, torch; print(basicsr.__file__); prin
 | 最终测试 | 328 条 sequence，2952 帧，独立 `test.txt`，仅在训练结束后使用 |
 | 图像 | 单通道、[0,1]；训练共同裁剪 128×128，不旋转翻转；验证整图 512×512 |
 | 多卡 | 官方 BasicSR DistributedDataParallel（DDP）；通过 `torchrun` + `--launcher pytorch` 启动；world_size=2；物理 GPU 0、1 |
-| Batch／workers | SwinIR 每卡 batch=3、global batch=6；HINT 每卡 batch=6、global batch=12；每卡 workers=4 |
+| Workers | 每卡 4，双卡合计 8；prefetch_mode=null |
 | 种子／数据重复倍率 | 42／1 |
-| 损失／优化器 | Charbonnier eps=1e-9，mean；Adam，SwinIR lr=1.732e-4、HINT lr=3.464e-4；betas=[0.9,0.999]，weight decay=0 |
-| 调度 | MultiStepLR，gamma=0.5；SwinIR milestones=[1066667,1600000,1866667,2000000,2133333]；HINT milestones=[533334,800000,933334,1000000,1066667] |
-| 总步数 | SwinIR 2,200,000；HINT 1,100,000 |
-| 日志／保存／验证 | SwinIR 每 267／6667／6667 步；HINT 每 134／3334／3334 步 |
-| EMA／warmup | 关闭 |
+| 损失／优化器 | Charbonnier eps=1e-9，loss_weight=1，mean；Adam，betas=[0.9,0.999]，weight decay=0 |
+| 调度 | MultiStepLR，gamma=0.5；各模型 milestones 见下表 |
+| 精度／EMA／warmup | FP32，未启用 AMP；ema_decay=0；warmup_iter=-1 |
+| 训练内验证 | save_img=false、pbar=false；PSNR/SSIM，crop_border=0、test_y_channel=false |
 
-两份配置共用数据划分与指标口径，保留各自现有训练预算。SwinIR 使用 `SwinIRModel`；HINT 使用 `HINTModel`（继承原生 `SRModel`，仅适配验证前向与分片验证）。学习率的更新和恢复沿用 BasicSR 原生语义。
+| 模型 | 每卡 batch | Global batch | 初始学习率 | 总 iter | Milestones | 日志／保存／验证间隔（iter） |
+| --- | ---: | ---: | --- | ---: | --- | --- |
+| SwinIR | 3 | 6 | 1.732e-4 | 800000 | [400000, 600000, 700000, 760000] | 267／20000／20000 |
+| HINT | 6 | 12 | 3.464e-4 | 400000 | [200000, 300000, 350000, 380000] | 134／3334／3334 |
+| UCAN | 3 | 6 | 1.732e-4 | 800000 | [400000, 600000, 700000, 760000] | 267／20000／20000 |
+
+三种模型的完整训练预算均为 480 万个 patch，约 145 个 epoch；相同样本曝光量用于对齐训练预算。SwinIR 使用 `SwinIRModel`，HINT 使用 `HINTModel`，UCAN 使用 `UCANModel`，三者复用原生 `SRModel` 训练流程，适配各自验证前向与公共分片验证。学习率的更新和恢复沿用 BasicSR 原生语义。
+
+UCAN 保留 embed_dim=48、window_size=16、mlp_ratio=1、conv_depth=5、use_checkpoint=false，使用单通道 ×1 残差恢复分支。当前每卡 batch=3 和 80 万步是对齐 SwinIR 的起始配置；接入验收完成 CPU 检查，双 4090 的吞吐和显存仍待短程实测。SwinIR/HINT 的双卡 batch 实测见 [2026-10-28 短程报告](SAR_short_validation_report_20261028.md)。
 
 ## 启动训练
 
@@ -60,7 +80,15 @@ basicsr/train.py \
 --launcher pytorch
 ```
 
-SwinIR 与 HINT 均正式采用官方 BasicSR 的 DistributedDataParallel（DDP）。以上命令通过 `torchrun` 启动双卡 `world_size=2`；SwinIR 每个 rank 的 batch=3，global batch=6；HINT 每个 rank 的 batch=6，global batch=12；每个 rank 的 `num_worker_per_gpu=4`，两个 rank 合计 workers=8。换用其他两张 GPU 时只需修改 `CUDA_VISIBLE_DEVICES`，并保持 `--nproc_per_node=2`。
+UCAN 启动示例：
+
+```bash
+CUDA_VISIBLE_DEVICES=0,1 uv run --no-sync torchrun \
+  --nproc_per_node=2 --master_port=29503 basicsr/train.py \
+  -opt options/SAR/train_ucan_single.yml --launcher pytorch
+```
+
+三种模型的训练配置均通过 `torchrun` 启动双卡 DDP、`world_size=2`；SwinIR/UCAN 每个 rank batch=3、global batch=6，HINT 每个 rank batch=6、global batch=12，每个 rank workers=4。全 Q=2 实验使用上表对应的 `train_*_single_q2.yml`，实验名带 `_q2` 后缀。换用其他两张 GPU 时修改 `CUDA_VISIBLE_DEVICES`，并保持 `--nproc_per_node=2`。
 
 后台运行示例：
 
@@ -77,9 +105,9 @@ basicsr/train.py \
 tail -f logs/swinir.console.log
 ```
 
-训练结果分别写入 `experiments/swinir_sar_single/`、`experiments/hint_sar_single/`：`models/` 保存网络，`training_states/` 保存优化器和 scheduler，日志位于实验目录，TensorBoard 位于 `tb_logger/<实验名>/`。验证只汇总恢复 PSNR/SSIM，不逐图打印、不保存恢复图片。每次验证会暂停训练，仅处理固定的 738 张验证图。
+训练结果写入 `experiments/<实验名>/`：原 H/L 实验名分别为 `swinir_sar_single`、`hint_sar_single`、`ucan_sar_single`，全 Q=2 加 `_q2` 后缀。`models/` 保存网络，`training_states/` 保存优化器和 scheduler，日志位于实验目录，TensorBoard 位于 `tb_logger/<实验名>/`。验证只汇总恢复 PSNR/SSIM，不逐图打印、不保存恢复图片。每次验证会暂停训练，仅处理固定的 738 张验证图。
 
-SwinIR 与 HINT 的训练内验证共用分片逻辑，由各个 DDP rank 按样本索引交错分片，双卡各处理 369 张，每卡 batch=1，不补齐或重复样本。验证前向直接使用 DDP 内部网络；结束时归约指标总和及实际样本数，按全部帧等权计算 PSNR/SSIM，然后各卡继续训练。rank 0 记录验证开始、结束、总耗时和汇总指标，NCCL 超时设置不变。
+三种模型的训练内验证共用分片逻辑，由各个 DDP rank 按样本索引交错分片，双卡各处理 369 张，每卡 batch=1，不补齐或重复样本。验证前向直接使用 DDP 内部网络；结束时归约指标总和及实际样本数，按全部帧等权计算 PSNR/SSIM，然后各卡继续训练。rank 0 记录验证开始、结束、总耗时和汇总指标，NCCL 超时设置不变。
 
 SwinIR 的非预设尺寸掩码直接在 GPU 生成，同尺寸各层、各张图共享两张运行时掩码（512×512 时约 128 MiB）。缓存不进入检查点或 DDP buffer 同步，尺寸或设备变化时重建；128×128 训练尺寸仍使用原有 buffer。默认 CPU 单线程即可受益，无需提高线程数。
 
@@ -108,7 +136,7 @@ basicsr/train.py \
 
 ## 训练完成后的最终测试
 
-两份训练 YAML 的 `final_test_opt` 指向各自测试配置。达到训练预算、保存 `net_g_latest.pth` 并完成末次验证后，各 rank 结束 DDP 通信并释放训练模型；仅 rank 0 启动独立单 GPU 测试进程。测试加载实际实验的最终权重，并沿用实验名称。中途保存、暂停或异常退出不触发测试。
+六份训练 YAML 的 `final_test_opt` 指向各自测试配置。达到训练预算、保存 `net_g_latest.pth` 并完成末次验证后，各 rank 结束 DDP 通信并释放训练模型；仅 rank 0 启动独立单 GPU 测试进程。测试加载实际实验的最终权重，并沿用实验名称。中途保存、暂停或异常退出不触发测试。
 
 最终测试只读取剩余 328 条 sequence（2952 帧），batch=1，按 split 顺序推理。HINT 在新进程中从空缓存开始。只保存恢复 PNG，不保存 LQ、GT 或拼接图；PNG 与指标使用相同的单通道 uint8 恢复结果。结果目录为：
 
@@ -132,7 +160,12 @@ CUDA_VISIBLE_DEVICES=0 uv run --no-sync python scripts/eval_sar.py \
 
 CUDA_VISIBLE_DEVICES=0 uv run --no-sync python scripts/eval_sar.py \
   -opt options/SAR/test_hint_single.yml
+
+CUDA_VISIBLE_DEVICES=0 uv run --no-sync python scripts/eval_sar.py \
+  -opt options/SAR/test_ucan_single.yml
 ```
+
+全 Q=2 使用对应的 `test_*_single_q2.yml`，默认读取相应 `_q2` 实验下的最终权重。
 
 自定义实验名时，通过 `--force_yml name=<实验名> path:pretrain_network_g=<实际最终权重路径>` 指定输出名称与权重。不要用最终测试集选择训练中间的检查点；训练中评估只使用验证集。
 
@@ -162,6 +195,15 @@ SwinIR 的 padding、模式恢复和掩码复用，以及 HINT 的 EMA 选择、
 uv run --no-sync python -m pytest -o addopts='' tests/test_swinir_model.py tests/test_hint_model.py -q
 ```
 
+UCAN 的前后向、512×512 整帧推理、checkpoint 重计算、保存恢复和 CPU Gloo 双进程验证：
+
+```bash
+CUDA_VISIBLE_DEVICES='' OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 \
+  uv run --no-sync python -m pytest -o addopts='' tests/test_ucan.py -q
+```
+
+UCAN 的检查范围和上游数值对照见 [接入记录](UCAN_integration.md)，以下 GPU 短流程覆盖 SwinIR/HINT。
+
 HINT 等价测试默认读取同级 `/data/cjz/HINT/basicsr/models/archs/HINT_arch.py`；也可通过 `HINT_REFERENCE_PATH` 指定。该文件只用于迁移测试，不是运行依赖；没有参考文件时该项跳过。
 
 完整模型双卡短流程（确认 GPU 0、1 空闲后运行）：
@@ -173,7 +215,7 @@ CUDA_VISIBLE_DEVICES=0,1 SAR_GPU_SMOKE=1 uv run --no-sync python -m pytest \
 
 该检查使用真实训练/验证数据与完整网络，通过 `torchrun` 启动两个 DDP 进程；SwinIR 总 batch 6，HINT 总 batch 12。SwinIR 检查奇数样本、空分片、重复验证和单卡指标对照；HINT 检查首步空缓存的动态参数、奇数样本与空分片，并从各 rank 的相同缓存快照重算对应分片指标。两者均检查验证后继续训练、两卡参数一致及原生保存恢复；恢复后的 HINT 从空缓存继续训练。还包含临时数据的训练完成后自动测试，最终测试集不参与验收。
 
-使用已有完整检查点验证完整验证集（以下以第 6667 步为例，先确认 GPU 0、1 空闲）：
+使用已有完整检查点验证完整验证集（以下以历史第 6667 步检查点为例，先确认 GPU 0、1 空闲；当前 SwinIR 每 20000 步保存，按实际 `.state` 路径替换）：
 
 ```bash
 check_dir=$(mktemp -d /tmp/swinir-ddp-validation.XXXXXX)
