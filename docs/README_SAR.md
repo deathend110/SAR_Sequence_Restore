@@ -1,6 +1,6 @@
 # SAR_Sequence_Restore 实验使用说明
 
-本工作区以标准 BasicSR 1.4.2 为主框架，提供单比特 SAR 的 SwinIR、HINT、UCAN 单帧基线。九帧按独立样本训练，保留 sequence 与 F₀～F₈ 信息用于评估。问题定义见 [Define.md](Define.md)，迁移来源与验证见 [迁移记录](migration_record.md)。UCAN 的原 H/L、全 Q=2 配置、接口差异和检查结果见 [UCAN 接入记录](UCAN_integration.md)。
+本工作区以标准 BasicSR 1.4.2 为主框架，提供单比特 SAR 的 SwinIR、HINT、UCAN 单帧基线。九帧按独立样本训练，保留 sequence 与 F₀～F₈ 信息用于评估。问题定义见 [Define.md](Define.md)，迁移来源与验证见 [迁移记录](migration_record.md)。UCAN 的原 H/L、全 Q=2 配置与接口差异见 [UCAN 接入记录](UCAN_integration.md)。
 
 ## 环境
 
@@ -54,7 +54,9 @@ YAML 中配置绝对数据路径，split 引用 `docs/splits/sar_single_seed42/`
 
 三种模型的完整训练预算均为 480 万个 patch，约 145 个 epoch；相同样本曝光量用于对齐训练预算。SwinIR 使用 `SwinIRModel`，HINT 使用 `HINTModel`，UCAN 使用 `UCANModel`，三者复用原生 `SRModel` 训练流程，适配各自验证前向与公共分片验证。学习率的更新和恢复沿用 BasicSR 原生语义。
 
-UCAN 保留 embed_dim=48、window_size=16、mlp_ratio=1、conv_depth=5、use_checkpoint=false，使用单通道 ×1 残差恢复分支。当前配置通过双 4090 的短测与完整验证：每卡 batch=6，双卡约 24.40 patch/秒，训练峰值 allocated 约 18.95 GiB/卡。学习率、Adam beta2 和衰减比例参考论文，数据协议、重建损失与总 patch 曝光量保持和其他 SAR 基线一致；具体配置依据和时间估计见 [UCAN 双 4090 配置报告](UCAN_4090x2_configuration_20261103.md)。此前单卡结果见 [GPU 3 短测报告](UCAN_gpu3_smoke_report_20261103.md)，SwinIR/HINT 的双卡实测见 [2026-10-28 短程报告](SAR_short_validation_report_20261028.md)。
+UCAN 保留 embed_dim=48、window_size=16、mlp_ratio=1、conv_depth=5、use_checkpoint=false，使用单通道 ×1 残差恢复分支。每卡 batch=6、global batch=12、总预算 400000 步；学习率、Adam beta2 和衰减比例参考论文，数据协议、重建损失与总 patch 曝光量和其他 SAR 基线一致。配置依据与启动方式见 [UCAN 双 4090 正式训练说明](UCAN_4090x2_configuration_20261103.md)。UCAN 短测产物与报告已清理；SwinIR/HINT 的双卡实验记录见 [2026-10-28 短程报告](SAR_short_validation_report_20261028.md)。
+
+2026-11-03 已使用物理 GPU 1、3 启动 UCAN 的 QH=2.5、QL=1.5 正式训练，运行命令、PID 与日志路径见 [正式训练记录](UCAN_training_run_20261103.md)。
 
 ## 启动训练
 
