@@ -16,7 +16,7 @@ uv run --no-sync python -c 'import basicsr, torch; print(basicsr.__file__); prin
 
 ## 数据和训练协议
 
-参数核对日期：2026-10-30，以 `options/SAR/` 下当前正式 YAML 为准。三种模型均提供原 H/L 和全 Q=2 两套配置；同一模型的两套配置使用相同训练参数和 seed42 划分，数据根目录与实验名分别设置。
+参数核对日期：2026-11-03，以 `options/SAR/` 下当前正式 YAML 为准。三种模型均提供原 H/L 和全 Q=2 两套配置；同一模型的两套配置使用相同训练参数和 seed42 划分，数据根目录与实验名分别设置。
 
 数据位于 `/data/cjz/SAR_Transformer/dataset_range_2dsft/` 下：
 
@@ -41,7 +41,7 @@ YAML 中配置绝对数据路径，split 引用 `docs/splits/sar_single_seed42/`
 | 多卡 | 官方 BasicSR DistributedDataParallel（DDP）；通过 `torchrun` + `--launcher pytorch` 启动；world_size=2；物理 GPU 0、1 |
 | Workers | 每卡 4，双卡合计 8；prefetch_mode=null |
 | 种子／数据重复倍率 | 42／1 |
-| 损失／优化器 | Charbonnier eps=1e-9，loss_weight=1，mean；Adam，betas=[0.9,0.999]，weight decay=0 |
+| 损失／优化器 | Charbonnier eps=1e-9，loss_weight=1，mean；Adam，weight decay=0；SwinIR/HINT betas=[0.9,0.999]，UCAN betas=[0.9,0.99] |
 | 调度 | MultiStepLR，gamma=0.5；各模型 milestones 见下表 |
 | 精度／EMA／warmup | FP32，未启用 AMP；ema_decay=0；warmup_iter=-1 |
 | 训练内验证 | save_img=false、pbar=false；PSNR/SSIM，crop_border=0、test_y_channel=false |
@@ -50,11 +50,11 @@ YAML 中配置绝对数据路径，split 引用 `docs/splits/sar_single_seed42/`
 | --- | ---: | ---: | --- | ---: | --- | --- |
 | SwinIR | 3 | 6 | 1.732e-4 | 800000 | [400000, 600000, 700000, 760000] | 267／20000／20000 |
 | HINT | 6 | 12 | 3.464e-4 | 400000 | [200000, 300000, 350000, 380000] | 134／3334／3334 |
-| UCAN | 3 | 6 | 1.732e-4 | 800000 | [400000, 600000, 700000, 760000] | 267／20000／20000 |
+| UCAN | 6 | 12 | 3.75e-4 | 400000 | [150000, 250000, 325000, 350000, 375000] | 134／10000／10000 |
 
 三种模型的完整训练预算均为 480 万个 patch，约 145 个 epoch；相同样本曝光量用于对齐训练预算。SwinIR 使用 `SwinIRModel`，HINT 使用 `HINTModel`，UCAN 使用 `UCANModel`，三者复用原生 `SRModel` 训练流程，适配各自验证前向与公共分片验证。学习率的更新和恢复沿用 BasicSR 原生语义。
 
-UCAN 保留 embed_dim=48、window_size=16、mlp_ratio=1、conv_depth=5、use_checkpoint=false，使用单通道 ×1 残差恢复分支。当前每卡 batch=3 和 80 万步是对齐 SwinIR 的起始配置；已完成 CPU 接入检查和 [2026-11-03 物理 GPU 3 单卡短测](UCAN_gpu3_smoke_report_20261103.md)，batch=3/6 均通过，双 4090 的 DDP 吞吐和显存仍待短程实测。SwinIR/HINT 的双卡 batch 实测见 [2026-10-28 短程报告](SAR_short_validation_report_20261028.md)。
+UCAN 保留 embed_dim=48、window_size=16、mlp_ratio=1、conv_depth=5、use_checkpoint=false，使用单通道 ×1 残差恢复分支。当前配置通过双 4090 的短测与完整验证：每卡 batch=6，双卡约 24.40 patch/秒，训练峰值 allocated 约 18.95 GiB/卡。学习率、Adam beta2 和衰减比例参考论文，数据协议、重建损失与总 patch 曝光量保持和其他 SAR 基线一致；具体配置依据和时间估计见 [UCAN 双 4090 配置报告](UCAN_4090x2_configuration_20261103.md)。此前单卡结果见 [GPU 3 短测报告](UCAN_gpu3_smoke_report_20261103.md)，SwinIR/HINT 的双卡实测见 [2026-10-28 短程报告](SAR_short_validation_report_20261028.md)。
 
 ## 启动训练
 
@@ -83,12 +83,12 @@ basicsr/train.py \
 UCAN 启动示例：
 
 ```bash
-CUDA_VISIBLE_DEVICES=0,1 uv run --no-sync torchrun \
+CUDA_VISIBLE_DEVICES=1,3 uv run --no-sync torchrun \
   --nproc_per_node=2 --master_port=29503 basicsr/train.py \
   -opt options/SAR/train_ucan_single.yml --launcher pytorch
 ```
 
-三种模型的训练配置均通过 `torchrun` 启动双卡 DDP、`world_size=2`；SwinIR/UCAN 每个 rank batch=3、global batch=6，HINT 每个 rank batch=6、global batch=12，每个 rank workers=4。全 Q=2 实验使用上表对应的 `train_*_single_q2.yml`，实验名带 `_q2` 后缀。换用其他两张 GPU 时修改 `CUDA_VISIBLE_DEVICES`，并保持 `--nproc_per_node=2`。
+三种模型的训练配置均通过 `torchrun` 启动双卡 DDP、`world_size=2`；SwinIR 每个 rank batch=3、global batch=6，HINT/UCAN 每个 rank batch=6、global batch=12，每个 rank workers=4。全 Q=2 实验使用上表对应的 `train_*_single_q2.yml`，实验名带 `_q2` 后缀。UCAN 示例使用本轮短测的 GPU 1、3，运行前确认空闲；换用其他两张 GPU 时修改 `CUDA_VISIBLE_DEVICES`，并保持 `--nproc_per_node=2`。
 
 后台运行示例：
 

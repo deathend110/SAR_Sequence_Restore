@@ -2,7 +2,7 @@
 
 日期：2026-10-29。
 
-参数核对日期：2026-10-30；三种模型的当前参数总表见 [README_SAR.md](README_SAR.md#数据和训练协议)，执行时以正式 YAML 为准。
+参数核对日期：2026-11-03；三种模型的当前参数总表见 [README_SAR.md](README_SAR.md#数据和训练协议)，执行时以正式 YAML 为准。
 
 ## 接入结论
 
@@ -23,7 +23,7 @@ UCAN 已作为独立的单帧恢复基线接入现有 BasicSR 注册、训练和
 | 窗口注意力 | 大窗口使用 PyTorch SDPA；代码允许 math 和 flash 后端 | 保留上游计算及 math 回退；显式指定 meshgrid 索引，评估时关闭注意力 dropout |
 | 验证前向 | 官方 UCANModel 固定以约 200 像素切块处理；测试 YAML 的 use_chop=false 未被读取 | 整帧前向，由网络内部 padding；绕过 DDP 包装，复用现有分片和指标归约 |
 | 推理状态 | 官方非 EMA 测试后直接切回 train | 保存和恢复原模式，异常时也恢复；支持 EMA 网络选择 |
-| 训练配置 | 检查到的版本只提供 Test 配置，README 引用的 Train 配置未包含在仓库 | 新建两个数据集各自的 train/test YAML，使用本仓库当前 SwinIR 训练协议 |
+| 训练配置 | 检查到的版本只提供 Test 配置，README 引用的 Train 配置未包含在仓库 | 新建两个数据集各自的 train/test YAML；数据、损失与预算沿用 SAR 对比协议，优化器与调度参考论文 |
 | 评估协议 | 官方 SR 测试使用 RGB 的 Y 通道，按放大倍数裁边 | 单通道整图、crop_border=0、test_y_channel=false，沿用 uint8 image-based PSNR/SSIM |
 
 还统一了 RotaryEmbedding 基类与子类调用的方法名，并显式导入 checkpoint 模块。保留了官方注意力缩放方式，包括 HPA 中 q 预缩放后再交给 SDPA 默认缩放的行为，以便核对上游数值。位置编码频率、相对位置索引均不进入持久权重。
@@ -37,16 +37,16 @@ UCAN 已作为独立的单帧恢复基线接入现有 BasicSR 注册、训练和
 | 原 H/L 数据集 | `options/SAR/train_ucan_single.yml` | `options/SAR/test_ucan_single.yml` | `ucan_sar_single` |
 | 全 Q=2 数据集 | `options/SAR/train_ucan_single_q2.yml` | `options/SAR/test_ucan_single_q2.yml` | `ucan_sar_single_q2` |
 
-训练配置对齐当前 SwinIR：seed42 序列划分、128×128 crop、每卡 batch=3、双卡 global batch=6、每卡 workers=4、800,000 iter、Adam lr=1.732e-4、betas=[0.9,0.999]、weight_decay=0；CharbonnierLoss 的 eps=1e-9、loss_weight=1、reduction=mean。FP32，未启用 AMP，EMA=0、warmup_iter=-1，学习率在 400k/600k/700k/760k 乘以 0.5，日志间隔 267 步，验证和保存间隔 20k。两套数据配置的这些参数相同。800k 对应 480 万个 patch、约 145 个 epoch，是完整比较的预算模板，接入验收没有启动该训练。
+当前正式配置经双 4090 短测后更新：seed42 序列划分、128×128 crop、每卡 batch=6、双卡 global batch=12、每卡 workers=4、400,000 iter、Adam lr=3.75e-4、betas=[0.9,0.99]、weight_decay=0；CharbonnierLoss 的 eps=1e-9、loss_weight=1、reduction=mean。FP32，未启用 AMP，EMA=0、warmup_iter=-1，学习率在 150k/250k/325k/350k/375k 乘以 0.5，日志间隔 134 步，验证和保存间隔 10k。两套数据配置的这些参数相同。400k 对应 480 万个 patch、约 145 个 epoch，与其他 SAR 基线保持总曝光量一致；论文参数的适配方式见 [双 4090 配置报告](UCAN_4090x2_configuration_20261103.md)。
 
-保留 SARSingleDataset 的数据读取及增强约定，不加入自然图像 SR 的旋转、翻转或附加损失。训练样本曝光量保持一致后，再用短程 GPU 实测决定是否提高 UCAN batch 并同步调整学习率和 iter。当前配置采用随机初始化，不加载官方 RGB 超分权重。
+保留 SARSingleDataset 的数据读取及增强约定，不加入自然图像 SR 的旋转、翻转或附加损失。UCAN 使用参考论文适配的优化器和调度参数，数据划分、crop、重建损失与总曝光量和其他 SAR 基线一致。当前配置采用随机初始化，不加载官方 RGB 超分权重。
 
 ## 使用方式
 
 在项目根目录执行，下列命令为后续正式运行准备，本次未执行：
 
 ```bash
-CUDA_VISIBLE_DEVICES=0,1 uv run --no-sync torchrun \
+CUDA_VISIBLE_DEVICES=1,3 uv run --no-sync torchrun \
   --nproc_per_node=2 --master_port=29503 basicsr/train.py \
   -opt options/SAR/train_ucan_single_q2.yml --launcher pytorch
 ```
@@ -86,6 +86,6 @@ CUDA_VISIBLE_DEVICES='' OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 \
 
 两个数据集的训练/验证路径及首条序列的 LQ/GT 图像读取均已检查，图像尺寸为 512×512；训练 3,688 条序列，验证 82 条序列，沿用同一 seed42 划分。
 
-接入验收时（2026-10-29），4 张 RTX 4090 均有正在运行的任务，因此使用 CPU 验证，没有启动正式训练。后续于 2026-11-03 完成物理 GPU 3 的单卡短测，结果见 [3 号卡短测报告](UCAN_gpu3_smoke_report_20261103.md)：H/L 的 batch=3/6、Q=2 的 batch=3、512×512 整帧前向及保存恢复均通过；单卡 batch=6 吞吐比 batch=3 提高约 35.4%。官方逐块 NaN/Inf 检查仍保留，双卡吞吐和分片验证待 DDP 短测确认。
+接入验收时（2026-10-29），4 张 RTX 4090 均有正在运行的任务，因此使用 CPU 验证，没有启动正式训练。2026-11-03 先完成 [物理 GPU 3 单卡短测](UCAN_gpu3_smoke_report_20261103.md)，随后在物理 GPU 1、3 上完成 [双卡配置短测及完整验证](UCAN_4090x2_configuration_20261103.md)。每卡 batch=6 的双卡吞吐约 24.40 patch/秒，峰值 allocated 18.95 GiB/卡，738 张验证图耗时约 247 秒；训练、分片验证和原生保存恢复通过。官方逐块 NaN/Inf 检查仍保留。
 
-单卡短测已完成。建议后续顺序：双卡真实数据短程检查与吞吐测量 → 约 1k–5k iter 验证损失趋势和稳定性 → 根据相同样本曝光量安排完整对比。UCAN 的 SR 优势能否迁移到单比特 SAR，应以本数据上的验证集结果判断。
+单双卡短测已完成，当前训练预算和对应配置已更新。正式训练中根据验证集跟踪收敛并选择权重；UCAN 的 SR 优势能否迁移到单比特 SAR，应以本数据上的验证集结果判断。

@@ -45,9 +45,17 @@ def test_configuration_matches_sar_protocol(suffix):
     reference = yaml_load(f'options/SAR/train_swinir_single{suffix}.yml')
     assert train['model_type'] == test['model_type'] == 'UCANModel'
     assert train['network_g'] == test['network_g']
-    assert train['datasets'] == reference['datasets']
-    assert train['train'] == reference['train']
-    assert train['val'] == reference['val']
+    # 模型可使用不同 batch/优化器；保持数据协议、重建损失和总样本曝光量一致。
+    datasets = deepcopy(train['datasets'])
+    reference_datasets = deepcopy(reference['datasets'])
+    batch = datasets['train'].pop('batch_size_per_gpu')
+    reference_batch = reference_datasets['train'].pop('batch_size_per_gpu')
+    assert datasets == reference_datasets
+    assert train['train']['pixel_opt'] == reference['train']['pixel_opt']
+    assert (batch * train['num_gpu'] * train['train']['total_iter'] == reference_batch * reference['num_gpu'] *
+            reference['train']['total_iter'])
+    assert train['val']['metrics'] == reference['val']['metrics']
+    assert train['manual_seed'] == reference['manual_seed']
     assert train['scale'] == test['scale'] == 1
     assert Path(train['final_test_opt']).name == f'test_ucan_single{suffix}.yml'
     assert test['path']['pretrain_network_g'] == f'experiments/{train["name"]}/models/net_g_latest.pth'
