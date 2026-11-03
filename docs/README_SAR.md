@@ -54,7 +54,7 @@ YAML 中配置绝对数据路径，split 引用 `docs/splits/sar_single_seed42/`
 
 三种模型的完整训练预算均为 480 万个 patch，约 145 个 epoch；相同样本曝光量用于对齐训练预算。SwinIR 使用 `SwinIRModel`，HINT 使用 `HINTModel`，UCAN 使用 `UCANModel`，三者复用原生 `SRModel` 训练流程，适配各自验证前向与公共分片验证。学习率的更新和恢复沿用 BasicSR 原生语义。
 
-UCAN 保留 embed_dim=48、window_size=16、mlp_ratio=1、conv_depth=5、use_checkpoint=false，使用单通道 ×1 残差恢复分支。当前每卡 batch=3 和 80 万步是对齐 SwinIR 的起始配置；接入验收完成 CPU 检查，双 4090 的吞吐和显存仍待短程实测。SwinIR/HINT 的双卡 batch 实测见 [2026-10-28 短程报告](SAR_short_validation_report_20261028.md)。
+UCAN 保留 embed_dim=48、window_size=16、mlp_ratio=1、conv_depth=5、use_checkpoint=false，使用单通道 ×1 残差恢复分支。当前每卡 batch=3 和 80 万步是对齐 SwinIR 的起始配置；已完成 CPU 接入检查和 [2026-11-03 物理 GPU 3 单卡短测](UCAN_gpu3_smoke_report_20261103.md)，batch=3/6 均通过，双 4090 的 DDP 吞吐和显存仍待短程实测。SwinIR/HINT 的双卡 batch 实测见 [2026-10-28 短程报告](SAR_short_validation_report_20261028.md)。
 
 ## 启动训练
 
