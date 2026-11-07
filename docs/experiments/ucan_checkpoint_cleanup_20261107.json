@@ -1,0 +1,822 @@
+{
+  "performed_at": "2026-11-07T15:53:37.005200+08:00",
+  "selection_basis": "Final validation Best records for PSNR/SSIM and greatest saved iteration; optimizer states retained for selected steps.",
+  "removed_checkpoint_files": 94,
+  "reclaimed_bytes": 467596598,
+  "reclaimed_mib": 445.9348659515381,
+  "experiments": [
+    {
+      "experiment": "ucan_sar_single",
+      "log": "experiments/ucan_sar_single/train_ucan_sar_single_20261103_162812.log",
+      "log_sha256": "32d1b551c7de93922ef0910d09c6ab948ed9a82c550602044a54761dbbf1d43b",
+      "best": {
+        "psnr": {
+          "value": 24.6824,
+          "iter": 300000
+        },
+        "ssim": {
+          "value": 0.7913,
+          "iter": 200000
+        }
+      },
+      "last_saved_iter": 400000,
+      "keep_iters": [
+        200000,
+        300000,
+        400000
+      ],
+      "retained": [
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_200000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1793798354176488803,
+          "inode": 95495584,
+          "sha256": "c99e6559d55df981e1f5dc65f4fab0b69fd4346b73fd150ac17724c32295364f"
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_300000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1793851334119535740,
+          "inode": 95495606,
+          "sha256": "bba90214eb10aae2fe3bbaea8f2c41edf995e6331ce6ed296994c42c3db0efe2"
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_400000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1793903622018681158,
+          "inode": 95495663,
+          "sha256": "ddef31b41035e6b26cd532caf67fe70a74f228030f6d5b51e693dad12d35abeb"
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_latest.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1793903881638527242,
+          "inode": 95495665,
+          "sha256": "7d8526330f64fd563fc13ccc5568af4b90fc52a7b00b9486c66cbabb13a6a7ba"
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/200000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1793798354331480626,
+          "inode": 95495585,
+          "sha256": "e1cec46092e8d51298ebaeccf972358b140d548f025a99c3accd93e64316a227"
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/300000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1793851334276538495,
+          "inode": 95495607,
+          "sha256": "f623fa1bede8c4b7de28039ca0d275305ebca09463e93ba169b8514f80e09994"
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/400000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1793903622177684734,
+          "inode": 95495664,
+          "sha256": "4a79449bd7cee513253451c5b17989801a8dc023e01940fac376abb3a76560f0"
+        }
+      ],
+      "removed": [
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_10000.pth",
+          "bytes": 3272360,
+          "mtime_ns": 1793699439100629112,
+          "inode": 95495414
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_100000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1793746250588518035,
+          "inode": 95495564
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_110000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1793751453728861353,
+          "inode": 95495566
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_120000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1793756667615274417,
+          "inode": 95495568
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_130000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1793761902740866203,
+          "inode": 95495570
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_140000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1793767147352152511,
+          "inode": 95495572
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_150000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1793772351836760334,
+          "inode": 95495574
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_160000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1793777543642284537,
+          "inode": 95495576
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_170000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1793782780957287890,
+          "inode": 95495578
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_180000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1793788006124747208,
+          "inode": 95495580
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_190000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1793793213684776498,
+          "inode": 95495582
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_20000.pth",
+          "bytes": 3272360,
+          "mtime_ns": 1793704608749969642,
+          "inode": 95495517
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_210000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1793803503641957892,
+          "inode": 95495586
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_220000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1793808713390451755,
+          "inode": 95495588
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_230000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1793813960011606162,
+          "inode": 95495590
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_240000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1793819471329542402,
+          "inode": 95495592
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_250000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1793824701691370774,
+          "inode": 95495594
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_260000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1793829933091083422,
+          "inode": 95495596
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_270000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1793835192177518929,
+          "inode": 95495599
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_280000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1793840927228343499,
+          "inode": 95495601
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_290000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1793846120413023178,
+          "inode": 95495604
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_30000.pth",
+          "bytes": 3272360,
+          "mtime_ns": 1793709767962140241,
+          "inode": 95495537
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_310000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1793856554010368907,
+          "inode": 95495608
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_320000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1793861728736440742,
+          "inode": 95495610
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_330000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1793866919201426375,
+          "inode": 95495612
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_340000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1793872079236493838,
+          "inode": 95495428
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_350000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1793877428603263140,
+          "inode": 95495434
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_360000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1793882702844977491,
+          "inode": 95495529
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_370000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1793887919288599770,
+          "inode": 95495657
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_380000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1793893161739769434,
+          "inode": 95495659
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_390000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1793898385392833384,
+          "inode": 95495661
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_40000.pth",
+          "bytes": 3272360,
+          "mtime_ns": 1793714965651025766,
+          "inode": 95495540
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_50000.pth",
+          "bytes": 3272360,
+          "mtime_ns": 1793720196734048945,
+          "inode": 95495542
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_60000.pth",
+          "bytes": 3272360,
+          "mtime_ns": 1793725403145761910,
+          "inode": 95495544
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_70000.pth",
+          "bytes": 3272360,
+          "mtime_ns": 1793730621516082535,
+          "inode": 95495546
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_80000.pth",
+          "bytes": 3272360,
+          "mtime_ns": 1793735824935053868,
+          "inode": 95495548
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_90000.pth",
+          "bytes": 3272360,
+          "mtime_ns": 1793741030568993406,
+          "inode": 95495552
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/10000.state",
+          "bytes": 6586472,
+          "mtime_ns": 1793699439396633784,
+          "inode": 95495516
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/100000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1793746250770522008,
+          "inode": 95495565
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/110000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1793751453887865243,
+          "inode": 95495567
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/120000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1793756667888280184,
+          "inode": 95495569
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/130000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1793761902898869540,
+          "inode": 95495571
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/140000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1793767147508156101,
+          "inode": 95495573
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/150000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1793772351993764192,
+          "inode": 95495575
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/160000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1793777543933290656,
+          "inode": 95495577
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/170000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1793782781139291681,
+          "inode": 95495579
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/180000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1793788006303753614,
+          "inode": 95495581
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/190000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1793793213837778629,
+          "inode": 95495583
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/20000.state",
+          "bytes": 6586472,
+          "mtime_ns": 1793704608944971893,
+          "inode": 95495530
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/210000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1793803503896964850,
+          "inode": 95495587
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/220000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1793808713584453529,
+          "inode": 95495589
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/230000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1793813960177609718,
+          "inode": 95495591
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/240000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1793819471509546467,
+          "inode": 95495593
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/250000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1793824701868374651,
+          "inode": 95495595
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/260000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1793829933381089837,
+          "inode": 95495597
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/270000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1793835192358522673,
+          "inode": 95495600
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/280000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1793840927409347578,
+          "inode": 95495603
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/290000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1793846120701029210,
+          "inode": 95495605
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/30000.state",
+          "bytes": 6586472,
+          "mtime_ns": 1793709768122143774,
+          "inode": 95495539
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/310000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1793856554189370028,
+          "inode": 95495609
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/320000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1793861728915445184,
+          "inode": 95495611
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/330000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1793866919561433729,
+          "inode": 95495615
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/340000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1793872079417505303,
+          "inode": 95495429
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/350000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1793877428834267833,
+          "inode": 95495437
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/360000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1793882703023985912,
+          "inode": 95495655
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/370000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1793887919473605478,
+          "inode": 95495658
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/380000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1793893162025780899,
+          "inode": 95495660
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/390000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1793898385550837000,
+          "inode": 95495662
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/40000.state",
+          "bytes": 6586472,
+          "mtime_ns": 1793714965832029931,
+          "inode": 95495541
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/50000.state",
+          "bytes": 6586472,
+          "mtime_ns": 1793720197018056162,
+          "inode": 95495543
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/60000.state",
+          "bytes": 6586472,
+          "mtime_ns": 1793725403325765978,
+          "inode": 95495545
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/70000.state",
+          "bytes": 6586472,
+          "mtime_ns": 1793730621696085996,
+          "inode": 95495547
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/80000.state",
+          "bytes": 6586472,
+          "mtime_ns": 1793735825114057862,
+          "inode": 95495549
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/90000.state",
+          "bytes": 6586472,
+          "mtime_ns": 1793741030757996713,
+          "inode": 95495563
+        }
+      ],
+      "latest_alias": {
+        "path": "experiments/ucan_sar_single/models/net_g_latest.pth",
+        "target": "net_g_400000.pth",
+        "duplicate_bytes": 3273798
+      },
+      "non_checkpoint_files": [
+        {
+          "path": "experiments/ucan_sar_single/launch.json",
+          "bytes": 1225,
+          "mtime_ns": 1793694649932307885,
+          "inode": 95495528,
+          "sha256": "76d07bf5dd71d2abd545eb2d853e432820b674efe1d64b2bae5d09c1567b37d3"
+        },
+        {
+          "path": "experiments/ucan_sar_single/train_ucan_sar_single_20261103_162812.log",
+          "bytes": 495434,
+          "mtime_ns": 1793904126313046744,
+          "inode": 95495526,
+          "sha256": "32d1b551c7de93922ef0910d09c6ab948ed9a82c550602044a54761dbbf1d43b"
+        },
+        {
+          "path": "experiments/ucan_sar_single/train_ucan_single.yml",
+          "bytes": 2872,
+          "mtime_ns": 1793694492676123986,
+          "inode": 95495523,
+          "sha256": "2ccfed68c3b28d721a17846de976b6b47f40eeb378189087c9e72bbe107e12c2"
+        }
+      ],
+      "retained_after": [
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_200000.pth",
+          "bytes": 3273798,
+          "sha256": "c99e6559d55df981e1f5dc65f4fab0b69fd4346b73fd150ac17724c32295364f",
+          "symlink_target": null
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_300000.pth",
+          "bytes": 3273798,
+          "sha256": "bba90214eb10aae2fe3bbaea8f2c41edf995e6331ce6ed296994c42c3db0efe2",
+          "symlink_target": null
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_400000.pth",
+          "bytes": 3273798,
+          "sha256": "ddef31b41035e6b26cd532caf67fe70a74f228030f6d5b51e693dad12d35abeb",
+          "symlink_target": null
+        },
+        {
+          "path": "experiments/ucan_sar_single/models/net_g_latest.pth",
+          "bytes": 3273798,
+          "sha256": "ddef31b41035e6b26cd532caf67fe70a74f228030f6d5b51e693dad12d35abeb",
+          "symlink_target": "net_g_400000.pth"
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/200000.state",
+          "bytes": 6618058,
+          "sha256": "e1cec46092e8d51298ebaeccf972358b140d548f025a99c3accd93e64316a227",
+          "symlink_target": null
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/300000.state",
+          "bytes": 6618058,
+          "sha256": "f623fa1bede8c4b7de28039ca0d275305ebca09463e93ba169b8514f80e09994",
+          "symlink_target": null
+        },
+        {
+          "path": "experiments/ucan_sar_single/training_states/400000.state",
+          "bytes": 6618058,
+          "sha256": "4a79449bd7cee513253451c5b17989801a8dc023e01940fac376abb3a76560f0",
+          "symlink_target": null
+        }
+      ]
+    },
+    {
+      "experiment": "ucan_sar_single_q2",
+      "log": "experiments/ucan_sar_single_q2/train_ucan_sar_single_q2_20261106_160014.log",
+      "log_sha256": "c021efc10175a1eab9aad018eb412fe5de86901dd7c9ab4519ac8d7d8320b49a",
+      "best": {
+        "psnr": {
+          "value": 24.5978,
+          "iter": 110000
+        },
+        "ssim": {
+          "value": 0.7921,
+          "iter": 110000
+        }
+      },
+      "last_saved_iter": 120000,
+      "keep_iters": [
+        110000,
+        120000
+      ],
+      "retained": [
+        {
+          "path": "experiments/ucan_sar_single_q2/models/net_g_110000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1794011099148188472,
+          "inode": 95558844,
+          "sha256": "9ef0f14eb7984f4f7a7a0ec415bb1d07f141392318dd2faa9751f739ed116ad8"
+        },
+        {
+          "path": "experiments/ucan_sar_single_q2/models/net_g_120000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1794016569049257392,
+          "inode": 95558846,
+          "sha256": "a69bb8e40a0619c2453de168a83269dea994660cfc046ce99f9b0f9352b08783"
+        },
+        {
+          "path": "experiments/ucan_sar_single_q2/training_states/110000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1794011099375193564,
+          "inode": 95558845,
+          "sha256": "2385764e4d4961c7823c1b4869e8a1d6b3ca7fa096bab6cb09054379acb4e457"
+        },
+        {
+          "path": "experiments/ucan_sar_single_q2/training_states/120000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1794016569304263000,
+          "inode": 95558847,
+          "sha256": "880dd31f221cdcb82aaa7bdbaf9d1d55b78a15f87806f1e1c6e3e934792a67c1"
+        }
+      ],
+      "removed": [
+        {
+          "path": "experiments/ucan_sar_single_q2/models/net_g_10000.pth",
+          "bytes": 3272360,
+          "mtime_ns": 1793957061288603367,
+          "inode": 95558815
+        },
+        {
+          "path": "experiments/ucan_sar_single_q2/models/net_g_100000.pth",
+          "bytes": 3273798,
+          "mtime_ns": 1794005508454792143,
+          "inode": 95558842
+        },
+        {
+          "path": "experiments/ucan_sar_single_q2/models/net_g_20000.pth",
+          "bytes": 3272360,
+          "mtime_ns": 1793962323228535258,
+          "inode": 95558817
+        },
+        {
+          "path": "experiments/ucan_sar_single_q2/models/net_g_30000.pth",
+          "bytes": 3272360,
+          "mtime_ns": 1793967588113382313,
+          "inode": 95558828
+        },
+        {
+          "path": "experiments/ucan_sar_single_q2/models/net_g_40000.pth",
+          "bytes": 3272360,
+          "mtime_ns": 1793972853078709602,
+          "inode": 95558830
+        },
+        {
+          "path": "experiments/ucan_sar_single_q2/models/net_g_50000.pth",
+          "bytes": 3272360,
+          "mtime_ns": 1793978136567859762,
+          "inode": 95558832
+        },
+        {
+          "path": "experiments/ucan_sar_single_q2/models/net_g_60000.pth",
+          "bytes": 3272360,
+          "mtime_ns": 1793983776334525425,
+          "inode": 95558834
+        },
+        {
+          "path": "experiments/ucan_sar_single_q2/models/net_g_70000.pth",
+          "bytes": 3272360,
+          "mtime_ns": 1793989144674297634,
+          "inode": 95558836
+        },
+        {
+          "path": "experiments/ucan_sar_single_q2/models/net_g_80000.pth",
+          "bytes": 3272360,
+          "mtime_ns": 1793994654092873186,
+          "inode": 95558838
+        },
+        {
+          "path": "experiments/ucan_sar_single_q2/models/net_g_90000.pth",
+          "bytes": 3272360,
+          "mtime_ns": 1793999888461902544,
+          "inode": 95558840
+        },
+        {
+          "path": "experiments/ucan_sar_single_q2/training_states/10000.state",
+          "bytes": 6586472,
+          "mtime_ns": 1793957061544609507,
+          "inode": 95558816
+        },
+        {
+          "path": "experiments/ucan_sar_single_q2/training_states/100000.state",
+          "bytes": 6618058,
+          "mtime_ns": 1794005508658797028,
+          "inode": 95558843
+        },
+        {
+          "path": "experiments/ucan_sar_single_q2/training_states/20000.state",
+          "bytes": 6586472,
+          "mtime_ns": 1793962323407538764,
+          "inode": 95558818
+        },
+        {
+          "path": "experiments/ucan_sar_single_q2/training_states/30000.state",
+          "bytes": 6586472,
+          "mtime_ns": 1793967588295386836,
+          "inode": 95558829
+        },
+        {
+          "path": "experiments/ucan_sar_single_q2/training_states/40000.state",
+          "bytes": 6586472,
+          "mtime_ns": 1793972853233715648,
+          "inode": 95558831
+        },
+        {
+          "path": "experiments/ucan_sar_single_q2/training_states/50000.state",
+          "bytes": 6586472,
+          "mtime_ns": 1793978136827865226,
+          "inode": 95558833
+        },
+        {
+          "path": "experiments/ucan_sar_single_q2/training_states/60000.state",
+          "bytes": 6586472,
+          "mtime_ns": 1793983776535529871,
+          "inode": 95558835
+        },
+        {
+          "path": "experiments/ucan_sar_single_q2/training_states/70000.state",
+          "bytes": 6586472,
+          "mtime_ns": 1793989144828301061,
+          "inode": 95558837
+        },
+        {
+          "path": "experiments/ucan_sar_single_q2/training_states/80000.state",
+          "bytes": 6586472,
+          "mtime_ns": 1793994654270877290,
+          "inode": 95558839
+        },
+        {
+          "path": "experiments/ucan_sar_single_q2/training_states/90000.state",
+          "bytes": 6586472,
+          "mtime_ns": 1793999888642906667,
+          "inode": 95558841
+        }
+      ],
+      "latest_alias": null,
+      "non_checkpoint_files": [
+        {
+          "path": "experiments/ucan_sar_single_q2/launch.json",
+          "bytes": 1504,
+          "mtime_ns": 1793952156111120599,
+          "inode": 95558827,
+          "sha256": "9f9c3e6fbc7017e1407691ebaabc7e1ba615a3895a2b80e6eee2eb647691a55e"
+        },
+        {
+          "path": "experiments/ucan_sar_single_q2/train_ucan_sar_single_q2_20261106_160014.log",
+          "bytes": 183816,
+          "mtime_ns": 1794021124275261178,
+          "inode": 95558825,
+          "sha256": "c021efc10175a1eab9aad018eb412fe5de86901dd7c9ab4519ac8d7d8320b49a"
+        },
+        {
+          "path": "experiments/ucan_sar_single_q2/train_ucan_single_q2.yml",
+          "bytes": 2911,
+          "mtime_ns": 1793952014758985293,
+          "inode": 95558824,
+          "sha256": "994500d9a30ceb74591ab8c30a29a28b9abcce08eadd07ce2593a81467a51e50"
+        }
+      ],
+      "retained_after": [
+        {
+          "path": "experiments/ucan_sar_single_q2/models/net_g_110000.pth",
+          "bytes": 3273798,
+          "sha256": "9ef0f14eb7984f4f7a7a0ec415bb1d07f141392318dd2faa9751f739ed116ad8",
+          "symlink_target": null
+        },
+        {
+          "path": "experiments/ucan_sar_single_q2/models/net_g_120000.pth",
+          "bytes": 3273798,
+          "sha256": "a69bb8e40a0619c2453de168a83269dea994660cfc046ce99f9b0f9352b08783",
+          "symlink_target": null
+        },
+        {
+          "path": "experiments/ucan_sar_single_q2/training_states/110000.state",
+          "bytes": 6618058,
+          "sha256": "2385764e4d4961c7823c1b4869e8a1d6b3ca7fa096bab6cb09054379acb4e457",
+          "symlink_target": null
+        },
+        {
+          "path": "experiments/ucan_sar_single_q2/training_states/120000.state",
+          "bytes": 6618058,
+          "sha256": "880dd31f221cdcb82aaa7bdbaf9d1d55b78a15f87806f1e1c6e3e934792a67c1",
+          "symlink_target": null
+        }
+      ]
+    }
+  ],
+  "verification": "Retained files loaded before removal; numeric weights finite; saved state iterations match; retained hashes and non-checkpoint file hashes verified; latest alias resolves to equal final weights."
+}
