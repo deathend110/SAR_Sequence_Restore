@@ -1,0 +1,17 @@
+{
+  "iteration": 129507,
+  "epoch": 46,
+  "batch_index": 2270,
+  "rank": 1,
+  "phase": "forward",
+  "failure": "ValueError('Input contains NaN or Inf.')",
+  "local_bad_gradients": [],
+  "paths": [
+    "/data/cjz/SAR_Transformer/dataset_range_2dsft/range_2d_sft_q2_s0_fr1p3_fa0p4_phi0_lp0p99_hp99p9_roi600/LQ/city2_histeq_rstart_005401_cstart_000007977/005.png",
+    "/data/cjz/SAR_Transformer/dataset_range_2dsft/range_2d_sft_q2_s0_fr1p3_fa0p4_phi0_lp0p99_hp99p9_roi600/LQ/sar_figure_rstart_002101_cstart_000006145/006.png",
+    "/data/cjz/SAR_Transformer/dataset_range_2dsft/range_2d_sft_q2_s0_fr1p3_fa0p4_phi0_lp0p99_hp99p9_roi600/LQ/sar_figure_rstart_000901_cstart_000006145/004.png",
+    "/data/cjz/SAR_Transformer/dataset_range_2dsft/range_2d_sft_q2_s0_fr1p3_fa0p4_phi0_lp0p99_hp99p9_roi600/LQ/port_rstart_002701_cstart_000000385/001.png",
+    "/data/cjz/SAR_Transformer/dataset_range_2dsft/range_2d_sft_q2_s0_fr1p3_fa0p4_phi0_lp0p99_hp99p9_roi600/LQ/city2_histeq_rstart_004801_cstart_000004993/004.png",
+    "/data/cjz/SAR_Transformer/dataset_range_2dsft/range_2d_sft_q2_s0_fr1p3_fa0p4_phi0_lp0p99_hp99p9_roi600/LQ/port_rstart_000301_cstart_000004609/000.png"
+  ]
+}

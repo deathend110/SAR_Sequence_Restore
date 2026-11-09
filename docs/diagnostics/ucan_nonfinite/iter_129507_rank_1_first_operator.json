@@ -1,0 +1,99 @@
+{
+  "operator": "aten.native_layer_norm.default",
+  "module_stack": [
+    "",
+    "rg_2",
+    "rg_2.residual_group",
+    "rg_2.residual_group.norm_out"
+  ],
+  "inputs": [
+    {
+      "shape": [
+        6,
+        16384,
+        48
+      ],
+      "dtype": "torch.float32",
+      "nan": 0,
+      "inf": 0,
+      "finite_abs_max": 2.8575038809284438e+20
+    },
+    {
+      "shape": [
+        48
+      ],
+      "dtype": "torch.float32",
+      "nan": 0,
+      "inf": 0,
+      "finite_abs_max": 1.1463528871536255
+    },
+    {
+      "shape": [
+        48
+      ],
+      "dtype": "torch.float32",
+      "nan": 0,
+      "inf": 0,
+      "finite_abs_max": 0.15803435444831848
+    }
+  ],
+  "outputs": [
+    {
+      "shape": [
+        6,
+        16384,
+        48
+      ],
+      "dtype": "torch.float32",
+      "nan": 336,
+      "inf": 0,
+      "finite_abs_max": 7.869799613952637
+    },
+    {
+      "shape": [
+        6,
+        16384,
+        1
+      ],
+      "dtype": "torch.float32",
+      "nan": 0,
+      "inf": 0,
+      "finite_abs_max": 1.1787350689456325e+19
+    },
+    {
+      "shape": [
+        6,
+        16384,
+        1
+      ],
+      "dtype": "torch.float32",
+      "nan": 7,
+      "inf": 0,
+      "finite_abs_max": 0.3182716369628906
+    }
+  ],
+  "traceback": [
+    "  File \"/data/cjz/SAR_Sequence_Restore/scripts/diagnose_ucan_nonfinite.py\", line 218, in <module>\n    rank=rank, phase=phase, failure=failure,\n",
+    "  File \"/data/cjz/SAR_Sequence_Restore/scripts/diagnose_ucan_nonfinite.py\", line 200, in main\n    reduced_finite = torch.stack([torch.isfinite(p.grad).all() for p in net.parameters()\n",
+    "  File \"/data/cjz/SAR_Sequence_Restore/scripts/diagnose_ucan_nonfinite.py\", line 77, in replay\n    prediction = net(x)\n",
+    "  File \"/data/cjz/SAR_Sequence_Restore/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py\", line 1739, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n",
+    "  File \"/data/cjz/SAR_Sequence_Restore/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py\", line 1845, in _call_impl\n    return inner()\n",
+    "  File \"/data/cjz/SAR_Sequence_Restore/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py\", line 1793, in inner\n    result = forward_call(*args, **kwargs)\n",
+    "  File \"/data/cjz/SAR_Sequence_Restore/basicsr/archs/ucan_arch.py\", line 1498, in forward\n    res = self.conv_after_body(self.forward_features(x_first, params)) + x_first\n",
+    "  File \"/data/cjz/SAR_Sequence_Restore/basicsr/archs/ucan_arch.py\", line 1459, in forward_features\n    x = self.rg_2(x, x_size, new_attn_map, new_qk_map)\n",
+    "  File \"/data/cjz/SAR_Sequence_Restore/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py\", line 1739, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n",
+    "  File \"/data/cjz/SAR_Sequence_Restore/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py\", line 1845, in _call_impl\n    return inner()\n",
+    "  File \"/data/cjz/SAR_Sequence_Restore/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py\", line 1793, in inner\n    result = forward_call(*args, **kwargs)\n",
+    "  File \"/data/cjz/SAR_Sequence_Restore/basicsr/archs/ucan_arch.py\", line 1240, in forward\n    out = self.residual_group(x, x_size, layer_share_attn=layer_share_attn, layer_share_qk=layer_share_qk)\n",
+    "  File \"/data/cjz/SAR_Sequence_Restore/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py\", line 1739, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n",
+    "  File \"/data/cjz/SAR_Sequence_Restore/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py\", line 1845, in _call_impl\n    return inner()\n",
+    "  File \"/data/cjz/SAR_Sequence_Restore/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py\", line 1793, in inner\n    result = forward_call(*args, **kwargs)\n",
+    "  File \"/data/cjz/SAR_Sequence_Restore/basicsr/archs/ucan_arch.py\", line 1143, in forward\n    x = self.norm_out(x)\n",
+    "  File \"/data/cjz/SAR_Sequence_Restore/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py\", line 1739, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n",
+    "  File \"/data/cjz/SAR_Sequence_Restore/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py\", line 1845, in _call_impl\n    return inner()\n",
+    "  File \"/data/cjz/SAR_Sequence_Restore/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py\", line 1793, in inner\n    result = forward_call(*args, **kwargs)\n",
+    "  File \"/data/cjz/SAR_Sequence_Restore/.venv/lib/python3.12/site-packages/torch/nn/modules/normalization.py\", line 217, in forward\n    return F.layer_norm(\n",
+    "  File \"/data/cjz/SAR_Sequence_Restore/.venv/lib/python3.12/site-packages/torch/nn/functional.py\", line 2910, in layer_norm\n    return torch.layer_norm(\n",
+    "  File \"/data/cjz/SAR_Sequence_Restore/scripts/diagnose_ucan_nonfinite.py\", line 57, in __torch_dispatch__\n    traceback=traceback.format_stack(limit=25))\n"
+  ]
+}

@@ -1,0 +1,128 @@
+{
+  "iteration": 129507,
+  "rank": 1,
+  "replay_device": "cpu",
+  "input_range": [
+    0.0,
+    1.0
+  ],
+  "nonfinite_parameters": [],
+  "stages": [
+    {
+      "module": "rg_2.residual_group.blocks.0",
+      "input_abs_max": 10.008049011230469,
+      "output_abs_max": 47.83238220214844,
+      "nonfinite": 0
+    },
+    {
+      "module": "rg_2.residual_group.blocks.1",
+      "input_abs_max": 47.83238220214844,
+      "output_abs_max": 246.09603881835938,
+      "nonfinite": 0
+    },
+    {
+      "module": "rg_2.residual_group.blocks.2",
+      "input_abs_max": 246.09603881835938,
+      "output_abs_max": 246.37542724609375,
+      "nonfinite": 0
+    },
+    {
+      "module": "rg_2.residual_group.blocks.3",
+      "input_abs_max": 246.37542724609375,
+      "output_abs_max": 231.6988525390625,
+      "nonfinite": 0
+    },
+    {
+      "module": "rg_2.residual_group.blocks_2.0",
+      "input_abs_max": 252.2450408935547,
+      "output_abs_max": 18688.412109375,
+      "nonfinite": 0
+    },
+    {
+      "module": "rg_2.residual_group.block_merge.0",
+      "input_abs_max": 18688.412109375,
+      "output_abs_max": 11315.0302734375,
+      "nonfinite": 0
+    },
+    {
+      "module": "rg_2.residual_group.blocks_2.1",
+      "input_abs_max": 4920.72314453125,
+      "output_abs_max": 1524426.875,
+      "nonfinite": 0
+    },
+    {
+      "module": "rg_2.residual_group.block_merge.1",
+      "input_abs_max": 1524426.875,
+      "output_abs_max": 386473.46875,
+      "nonfinite": 0
+    },
+    {
+      "module": "rg_2.residual_group.blocks_2.2",
+      "input_abs_max": 118332.671875,
+      "output_abs_max": 191654592.0,
+      "nonfinite": 0
+    },
+    {
+      "module": "rg_2.residual_group.block_merge.2",
+      "input_abs_max": 191654592.0,
+      "output_abs_max": 58393104.0,
+      "nonfinite": 0
+    },
+    {
+      "module": "rg_2.residual_group.blocks_2.3",
+      "input_abs_max": 21641896.0,
+      "output_abs_max": 4977566679040.0,
+      "nonfinite": 0
+    },
+    {
+      "module": "rg_2.residual_group.block_merge.3",
+      "input_abs_max": 4977566679040.0,
+      "output_abs_max": 1438566973440.0,
+      "nonfinite": 0
+    },
+    {
+      "module": "rg_2.residual_group.blocks_2.4",
+      "input_abs_max": 237416316928.0,
+      "output_abs_max": 5.166687118506391e+20,
+      "nonfinite": 0
+    },
+    {
+      "module": "rg_2.residual_group.block_merge.4",
+      "input_abs_max": 5.166687118506391e+20,
+      "output_abs_max": 2.8426298635497505e+20,
+      "nonfinite": 0
+    }
+  ],
+  "norm_out": {
+    "input_abs_max": 2.8426298635497505e+20,
+    "input_nonfinite": 0,
+    "fp32_nan": 240,
+    "fp32_inf": 0,
+    "fp64_nonfinite": 0,
+    "fp64_output_abs_max": 7.869806281136227,
+    "per_sample_nan": [
+      0,
+      240,
+      0,
+      0,
+      0,
+      0
+    ],
+    "per_sample_input_abs_max": [
+      846.8192749023438,
+      2.8426298635497505e+20,
+      3483.21630859375,
+      434.7333679199219,
+      213.4872283935547,
+      137.9820556640625
+    ]
+  },
+  "paths": [
+    "/data/cjz/SAR_Transformer/dataset_range_2dsft/range_2d_sft_q2_s0_fr1p3_fa0p4_phi0_lp0p99_hp99p9_roi600/LQ/city2_histeq_rstart_005401_cstart_000007977/005.png",
+    "/data/cjz/SAR_Transformer/dataset_range_2dsft/range_2d_sft_q2_s0_fr1p3_fa0p4_phi0_lp0p99_hp99p9_roi600/LQ/sar_figure_rstart_002101_cstart_000006145/006.png",
+    "/data/cjz/SAR_Transformer/dataset_range_2dsft/range_2d_sft_q2_s0_fr1p3_fa0p4_phi0_lp0p99_hp99p9_roi600/LQ/sar_figure_rstart_000901_cstart_000006145/004.png",
+    "/data/cjz/SAR_Transformer/dataset_range_2dsft/range_2d_sft_q2_s0_fr1p3_fa0p4_phi0_lp0p99_hp99p9_roi600/LQ/port_rstart_002701_cstart_000000385/001.png",
+    "/data/cjz/SAR_Transformer/dataset_range_2dsft/range_2d_sft_q2_s0_fr1p3_fa0p4_phi0_lp0p99_hp99p9_roi600/LQ/city2_histeq_rstart_004801_cstart_000004993/004.png",
+    "/data/cjz/SAR_Transformer/dataset_range_2dsft/range_2d_sft_q2_s0_fr1p3_fa0p4_phi0_lp0p99_hp99p9_roi600/LQ/port_rstart_000301_cstart_000004609/000.png"
+  ]
+}

@@ -47,4 +47,58 @@ OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 PYTHONPATH=. .venv/bin/python \
   -m pytest -o addopts='' tests/test_ucan_nonfinite_diagnostic.py -q
 ```
 
-双卡诊断续跑已启动；当前结果以 `replay.console.log` 和现场 JSON 为准。在捕获首个异常算子之前，Fourier 带符号和归一化仍是待验证假设。
+## 实际捕获结果
+
+诊断在 **129,507 步、epoch 46、rank1 前向阶段**发现异常并提前停止，共续跑 9,507 步，没有跑到 130k。rank0 同步保存现场，但该 rank 本次前向没有报错。此前各步通过了梯度及更新后参数有限性检查。
+
+逐算子重放找到的首个非有限输出来自：
+
+```text
+rg_2.residual_group.norm_out
+aten.native_layer_norm.default
+```
+
+该算子的输入形状为 `[6, 16384, 48]`，输入全部有限，最大绝对值为 `2.8575038809284438e20`；归一化权重和偏置也全部有限。算子输出包含 **336 个 NaN**，其返回的倒标准差包含 **7 个 NaN**。这是异常首次产生的位置，而非后续 HybridBlock 抛出异常的位置。
+
+原始逐算子证据：[iter_129507_rank_1_first_operator.json](diagnostics/ucan_nonfinite/iter_129507_rank_1_first_operator.json)。双方的现场 `.pth` 保留在同一诊断目录，不纳入 Git。
+
+### 向前追踪幅值放大路径
+
+使用同一保存 batch 和模型参数进行 CPU 完整 batch 前向重放，异常再次出现在 `rg_2.residual_group.norm_out`。该 batch 输入范围为 `[0, 1]`，模型所有参数有限。
+
+四个 HybridBlock 之后的特征最大绝对值约为 `2.32e2`；后续连续五个 LKSA 块的输出幅值如下。CPU 与原 GPU 重放有浮点差异，但两者均复现特征爆炸与同一 LayerNorm 失稳。
+
+| 模块 | 输出最大绝对值 |
+|---|---:|
+| `blocks_2.0` | `1.87e4` |
+| `blocks_2.1` | `1.52e6` |
+| `blocks_2.2` | `1.92e8` |
+| `blocks_2.3` | `4.98e12` |
+| `blocks_2.4` | `5.17e20` |
+| 最后一个 `block_merge` | `2.84e20` |
+
+`BasicLayer.forward` 在这五轮 `SGFN → LKSA → block_merge → 残差相加` 之间没有做特征归一化。LKSA 中的核心表达式为：
+
+```python
+out = self.channel(x) * (large_kn + self.conv3(x))
+```
+
+这里的两条可学习分支直接相乘，门控值没有有界激活约束；重复堆叠会进一步放大大幅值输入。幅值增长主要发生在这一卷积分支序列中。
+
+在同一 CPU 重放中，向 `norm_out` 输入相同的特征：
+
+- FP32 LayerNorm 输出 240 个 NaN，均位于 batch 的第二个样本。
+- 仅把这一 LayerNorm 的输入、权重和偏置改为 FP64 进行诊断计算，输出全部有限，最大绝对值约 `7.87`。
+- 第二个样本为 `sar_figure_rstart_002101_cstart_000006145/006.png`。其特征最大绝对值约 `2.84e20`；其他五个样本的最大绝对值约在 `1.38e2` 到 `3.48e3` 之间。
+
+特征本身可被 FP32 表示，但这个量级的平方达到 `1e40`，超过 FP32 有限范围。上述对照支持 LayerNorm 的统计计算在巨大有限输入下失稳，而非输入已包含 NaN 或模型权重已被 NaN 污染。
+
+详细幅值及精度对照：[iter_129507_rank_1_amplitude_trace.json](diagnostics/ucan_nonfinite/iter_129507_rank_1_amplitude_trace.json)。
+
+### 本次结论
+
+本次捕获的链路是 **卷积分支连续乘法放大 → 巨大的有限特征 → FP32 LayerNorm 首次产生 NaN**。故障可以用保存的 batch 和参数再次复现，因此具有明确的数值触发条件。
+
+现场 Fourier 系数归一化分母的最小绝对值约为 `0.04458`，此次没有捕获到 Fourier 除法直接产生非有限值。此前提出的 Fourier 分母奇异性仍是独立风险；本次直接证据把主要幅值爆炸位置定位到了五个 LKSA 块，后续修复应优先检查这段分支的归一化和乘法增益控制。
+
+此次只补充诊断结论，没有修改网络结构或训练算法。
