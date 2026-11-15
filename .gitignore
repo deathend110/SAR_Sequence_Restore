@@ -36,6 +36,7 @@ version.py
 *.csv
 
 # template
+docs/tmp
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
