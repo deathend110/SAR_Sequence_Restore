@@ -31,48 +31,49 @@ LKSA 稳定化是恢复可信训练的前置工作，不与序列模块捆绑计
 
 ### 2.1 网络恢复的是归一化幅度 PNG
 
-当前 [SARSingleDataset](G:/VSCODE-G/SAR_Sequence_Restore/basicsr/data/sar_single_dataset.py:53) 将每个 sequence 的 000–008.png 展开为九个独立样本，灰度读取并除以 255。训练裁剪 128×128，LQ/GT 同坐标，不翻转旋转；验证整帧 512×512。网络没有接收复数回波、相位、阈值波形、Q 图或序列元数据。
+当前 [SARSingleDataset](../basicsr/data/sar_single_dataset.py "原引用：第 53 行") 将每个 sequence 的 000–008.png 展开为九个独立样本，灰度读取并除以 255。训练裁剪 128×128，LQ/GT 同坐标，不翻转旋转；验证整帧 512×512。网络没有接收复数回波、相位、阈值波形、Q 图或序列元数据。
 
 GT 来自未量化的 60 MHz 基网格回波，经距离压缩、RCMC、方位聚焦、取绝对值、场景分位数归一化、中心裁剪及 uint8 量化。它是**当前 RD 流程得到的参考幅度图**，并非已经证明无噪声、无旁瓣的真实反射率。目标应是恢复全部九帧并保持真实结构，不能把各帧 PSNR 拉成相等本身作为优化目标。
 
-依据：[generate_gt_image.m](<G:/MATLAB-G/SAR Dataset Transformer/src/sarproc/generate_gt_image.m:1>)、[focus_base_rc.m](<G:/MATLAB-G/SAR Dataset Transformer/src/sarproc/focus_base_rc.m:1>)、[sarflow_normalize_frame.m](<G:/MATLAB-G/SAR Dataset Transformer/src/workflow/sarflow_normalize_frame.m:1>)。
+依据：[generate_gt_image.m](<G:/MATLAB-G/SAR Dataset Transformer/src/sarproc/generate_gt_image.m> "原引用：第 1 行")、[focus_base_rc.m](<G:/MATLAB-G/SAR Dataset Transformer/src/sarproc/focus_base_rc.m> "原引用：第 1 行")、[sarflow_normalize_frame.m](<G:/MATLAB-G/SAR Dataset Transformer/src/workflow/sarflow_normalize_frame.m> "原引用：第 1 行")。
 
 ### 2.2 2D-SFT 是二维单频阈值，不是报告描述的变标成像算子
 
 实际量化链条是：
 
-\[
+$$
 e_Q=\operatorname{Interp}_{\rm range}(e;Q),\quad
 a_Q=\frac{\sqrt{2/\pi}\,\operatorname{mean}|e_Q|}{10^{\mathrm{STR}/20}},
-\]
-\[
+$$
+
+$$
 T_Q(\tau,\eta)=a_Q\exp\{j[2\pi f_r\tau+2\pi f_a\eta+\phi_0]\},\quad
 b_Q=\operatorname{csign}(e_Q+T_Q).
-\]
+$$
 
 实部与虚部分别取符号，零映射为 +1；严格说是每个 I/Q 分量一比特、每个复样本两个符号比特。随后距离压缩并回投影到基网格。
 
 H/L 两支针对同一个 1200×2224 连续回波块分别计算，再做：
 
-\[
+$$
 \gamma=\sqrt{(P_L+\epsilon)/(P_H+\epsilon)},\qquad
 R_{\rm mix}(:,j)=m_j\gamma R_H(:,j)+(1-m_j)R_L(:,j).
-\]
+$$
 
-其中 \(P_H,P_L\) 来自两个边界两侧各 64 列的功率统计；掩膜施加在**距离压缩后的方位列**。九个 1200 列窗口以 128 列步进，从同一混合 RC 中截取，再逐窗 RCMC、方位聚焦，取 600 ROI 后裁成 512。
+其中 $P_H,P_L$ 来自两个边界两侧各 64 列的功率统计；掩膜施加在**距离压缩后的方位列**。九个 1200 列窗口以 128 列步进，从同一混合 RC 中截取，再逐窗 RCMC、方位聚焦，取 600 ROI 后裁成 512。
 
 ```mermaid
-flowchart LR
-    A[同一连续复回波块] --> B[距离插值 QH / QL]
-    B --> C[加二维阈值并进行 I/Q 符号量化]
-    C --> D[距离压缩并回到基网格]
-    D --> E[H 支幅度对齐及 RC 方位列 H-L-H 拼接]
-    E --> F[9 个滑动成像窗口]
-    F --> G[RCMC 与方位聚焦]
-    G --> H[幅度、场景归一化、512 裁剪、uint8]
+graph LR
+    A["同一连续复回波块"] --> B["距离插值 QH / QL"]
+    B --> C["加二维阈值并进行 I/Q 符号量化"]
+    C --> D["距离压缩并回到基网格"]
+    D --> E["H 支幅度对齐及 RC 方位列 H-L-H 拼接"]
+    E --> F["9 个滑动成像窗口"]
+    F --> G["RCMC 与方位聚焦"]
+    G --> H["幅度、场景归一化、512 裁剪、uint8"]
 ```
 
-依据：[量化入口](<G:/MATLAB-G/SAR Dataset Transformer/src/sft/generate_range_2dsft_rc.m:11>)、[阈值幅度](<G:/MATLAB-G/SAR Dataset Transformer/src/sft/build_2dsft_threshold.m:5>)、[阈值载波](<G:/MATLAB-G/SAR Dataset Transformer/src/sft/build_2dsft_carrier.m:4>)、[H/L 混合](<G:/MATLAB-G/SAR Dataset Transformer/src/workflow/sarflow_mix_sequence_rc.m:6>)、[功率对齐](<G:/MATLAB-G/SAR Dataset Transformer/src/sarproc/estimate_rc_alignment.m:18>)、[实际逐帧生产](<G:/MATLAB-G/SAR Dataset Transformer/src/workflow/sarflow_generate_impl.m:380>)。
+依据：[量化入口](<G:/MATLAB-G/SAR Dataset Transformer/src/sft/generate_range_2dsft_rc.m> "原引用：第 11 行")、[阈值幅度](<G:/MATLAB-G/SAR Dataset Transformer/src/sft/build_2dsft_threshold.m> "原引用：第 5 行")、[阈值载波](<G:/MATLAB-G/SAR Dataset Transformer/src/sft/build_2dsft_carrier.m> "原引用：第 4 行")、[H/L 混合](<G:/MATLAB-G/SAR Dataset Transformer/src/workflow/sarflow_mix_sequence_rc.m> "原引用：第 6 行")、[功率对齐](<G:/MATLAB-G/SAR Dataset Transformer/src/sarproc/estimate_rc_alignment.m> "原引用：第 18 行")、[实际逐帧生产](<G:/MATLAB-G/SAR Dataset Transformer/src/workflow/sarflow_generate_impl.m> "原引用：第 380 行")。
 
 由此有四项修正：
 
@@ -81,39 +82,39 @@ flowchart LR
 3. **归一化使用场景统计。** 不是报告设想的每帧自动归一化；阈值幅度则使用连续回波块统计。二者不能混淆。
 4. **列方向是当前数据的滑窗轴。** 参数与裁剪源码还给出一个历史 1 px 起点偏移：首帧最终取原成像窗口第 344–855 列，而逻辑区从完整块第 345 列开始。直接投影 RC 掩膜时，母图中的名义边界为零基坐标 513、1025，而非 512、1024。这不影响 128 步进重叠，但区域掩膜必须沿用真实索引，并把成像扩散带单独评价。此项为源码推导，不主张本轮移动旧数据。
 
-最后一项依据：[ROI 索引](<G:/MATLAB-G/SAR Dataset Transformer/src/sarproc/sar_image_roi_indices.m:7>)、[中心裁剪](<G:/MATLAB-G/SAR Dataset Transformer/src/utils/crop_center.m:3>)。生成器的 [区域指标函数](<G:/MATLAB-G/SAR Dataset Transformer/src/workflow/sarflow_sequence_metrics.m:4>) 已采用实际索引，可作为后续移植依据。
+最后一项依据：[ROI 索引](<G:/MATLAB-G/SAR Dataset Transformer/src/sarproc/sar_image_roi_indices.m> "原引用：第 7 行")、[中心裁剪](<G:/MATLAB-G/SAR Dataset Transformer/src/utils/crop_center.m> "原引用：第 3 行")。生成器的 [区域指标函数](<G:/MATLAB-G/SAR Dataset Transformer/src/workflow/sarflow_sequence_metrics.m> "原引用：第 4 行") 已采用实际索引，可作为后续移植依据。
 
 ### 2.3 Q 的真实定义推翻了报告的定量谐波结论
 
-本轮读取 `inputs/parameters/FS60_params.mat`：\(F_{s,0}=60\) MHz，\(B=45\) MHz，PRF=240 Hz，距离/方位窗口均为 1200 点。代码中的 Q 是**相对于 60 MHz 基网格的距离插值倍率**：
+本轮读取 `inputs/parameters/FS60_params.mat`：$F_{s,0}=60$ MHz，$B=45$ MHz，PRF=240 Hz，距离/方位窗口均为 1200 点。代码中的 Q 是**相对于 60 MHz 基网格的距离插值倍率**：
 
-\[
+$$
 F_{s,Q}=Q_{\rm eff}F_{s,0},\qquad F_{s,Q}/B=(4/3)Q_{\rm eff}.
-\]
+$$
 
-| 数据来源 | 名义 Q | 实际距离采样率 | 实际 \(F_s/B\) |
+| 数据来源 | 名义 Q | 实际距离采样率 | 实际 $F_s/B$ |
 |---|---:|---:|---:|
 | H 支 | 2.5 | 150 MHz | 10/3 |
 | L 支 | 1.5 | 90 MHz | 2 |
 | 全 Q=2 | 2 | 120 MHz | 8/3 |
 
-依据：[resolve_range_grid.m](<G:/MATLAB-G/SAR Dataset Transformer/src/sampling/resolve_range_grid.m:9>)；生产 metadata 也确认本项目 H/L 为 2.5/1.5、STR=1 dB、fr/Br=0.9、fa/Ba=0.5。
+依据：[resolve_range_grid.m](<G:/MATLAB-G/SAR Dataset Transformer/src/sampling/resolve_range_grid.m> "原引用：第 9 行")；生产 metadata 也确认本项目 H/L 为 2.5/1.5、STR=1 dB、fr/Br=0.9、fa/Ba=0.5。
 
 这里的不同 Q 由同一基网格复回波在量化前数值插值得到，改变的是模拟量化的采样密度；它没有创造原始未量化回波之外的新带外信息，也不是不同帧独立采集的多次观测。
 
-即使接受报告的“零阈值、单一理想 LFM、三次项谱支撑为 3B”的简化模型，L 支也已经处在其所谓 \(F_s/B=2\) 临界点，不能套用“Q=1.5 导致全通带三次混叠”的结论。真实模型还加入二维阈值，引入信号与阈值之间的互调；折叠频率、能量和成像残差须由真实链条分析。
+即使接受报告的“零阈值、单一理想 LFM、三次项谱支撑为 3B”的简化模型，L 支也已经处在其所谓 $F_s/B=2$ 临界点，不能套用“Q=1.5 导致全通带三次混叠”的结论。真实模型还加入二维阈值，引入信号与阈值之间的互调；折叠频率、能量和成像残差须由真实链条分析。
 
-因此，**0%、33.3%、66.7%、100% 等数字不能作为本项目的实测比例或物理常数。** 频率支撑的覆盖长度也不等于能量占比；相干项的相位、匹配滤波及多散射体交叉项均会改变能量。报告的 \(s^{*(2k+1)}\) 记法未定义为卷积、幂还是共轭，不能构成一般复回波量化展开。
+因此，**0%、33.3%、66.7%、100% 等数字不能作为本项目的实测比例或物理常数。** 频率支撑的覆盖长度也不等于能量占比；相干项的相位、匹配滤波及多散射体交叉项均会改变能量。报告的 $s^{*(2k+1)}$ 记法未定义为卷积、幂还是共轭，不能构成一般复回波量化展开。
 
 H/L 与全 Q=2 的差别还同时包括 STR（1→0 dB）、fr/Br（0.9→1.3）、fa/Ba（0.5→0.4）、有无 RC 能量对齐、不同输入归一化统计。**两套模型的增益差不能直接相减来估计 H→L 机制。**
 
 ### 2.4 幅度可辨识性与 H→L 信息的合理边界
 
-在当前阈值随块幅度自适应的实现中，对正标量 \(c\)，有 \(a_Q(ce)=ca_Q(e)\)，从而理想数学下：
+在当前阈值随块幅度自适应的实现中，对正标量 $c$，有 $a_Q(ce)=ca_Q(e)$，从而理想数学下：
 
-\[
+$$
 \operatorname{csign}(ce_Q+cT_Q)=\operatorname{csign}(e_Q+T_Q).
-\]
+$$
 
 没有额外幅度元数据或标定观测，就不能从这些比特唯一确定原始绝对幅度。网络可能学习数据分布下的相对幅度映射；H 区也可能提供同场景风格统计，但这不是绝对辐射标定的证明。
 
@@ -163,9 +164,9 @@ suburb_rstart_004801_cstart_000003457
 
 生产代码按 3×128=384 列间隔创建 sequence，末尾还可能使用更短间隔。帧原始窗口键为：
 
-\[
+$$
 (\mathrm{scene},\mathrm{rstart},\mathrm{cstart}+128t),\quad t=0,\dots,8.
-\]
+$$
 
 本轮遍历三个已有 split 文本，统计 val/test 的键是否在 train 中出现：
 
@@ -183,7 +184,7 @@ suburb_rstart_004801_cstart_000003457
 - GT：逐像素完全相同。
 - LQ：MAE=10.23156/255，最大差=74/255。不同 sequence 的 H/L 掩膜、块阈值及能量对齐使退化不同，但监督目标仍然重复。
 
-现有 [划分说明](G:/VSCODE-G/SAR_Sequence_Restore/docs/splits/sar_single_seed42/README.md:5) 确实保证 sequence 名称互斥，却没有保证原始窗口或地面内容互斥。七个场景也都同时出现在三个集合中。
+现有 [划分说明](splits/sar_single_seed42/README.md "原引用：第 5 行") 确实保证 sequence 名称互斥，却没有保证原始窗口或地面内容互斥。七个场景也都同时出现在三个集合中。
 
 新实验要区分：
 
@@ -210,44 +211,45 @@ suburb_rstart_004801_cstart_000003457
 | LKSA | 16 通道；已有横/竖可分离卷积和膨胀横/竖卷积 | DHD 把“方形核替换十字核”当全新能力不符合源码 |
 | ESA | 带 Sigmoid 的有界门控 | 不能与无界 LKSA 一起归为相同二阶无界门控 |
 
-依据：[HPA 与 Hybrid 配置](G:/VSCODE-G/SAR_Sequence_Restore/basicsr/archs/ucan_arch.py:1027)、[窗口共享实现](G:/VSCODE-G/SAR_Sequence_Restore/basicsr/archs/ucan_arch.py:945)、[组间共享](G:/VSCODE-G/SAR_Sequence_Restore/basicsr/archs/ucan_arch.py:1458)、[LKSA](G:/VSCODE-G/SAR_Sequence_Restore/basicsr/archs/ucan_arch.py:507)、[ESA](G:/VSCODE-G/SAR_Sequence_Restore/basicsr/archs/ucan_arch.py:403)。
+依据：[HPA 与 Hybrid 配置](../basicsr/archs/ucan_arch.py "原引用：第 1027 行")、[窗口共享实现](../basicsr/archs/ucan_arch.py "原引用：第 945 行")、[组间共享](../basicsr/archs/ucan_arch.py "原引用：第 1458 行")、[LKSA](../basicsr/archs/ucan_arch.py "原引用：第 507 行")、[ESA](../basicsr/archs/ucan_arch.py "原引用：第 403 行")。
 
 ### 4.2 Hedgehog 摘要不等于报告的 24×24 裸外积
 
 实际特征映射：
 
-\[
+$$
 u_q=W_q q+b_q,\quad \phi_q(q)=\operatorname{softmax}([2u_q,-2u_q]),\quad \phi_q(q)\in\mathbb R^{48},\quad v\in\mathbb R^{24}.
-\]
+$$
 
-key 使用独立可学习的映射 \(\phi_k\)；下文为简化记号分别写作 \(\phi(q)\)、\(\phi(k)\)。偏置初始为零，但训练后不应从实际公式中省略。
+key 使用独立可学习的映射 $\phi_k$；下文为简化记号分别写作 $\phi(q)$、$\phi(k)$。偏置初始为零，但训练后不应从实际公式中省略。
 
-设 \(P_i\) 表示实现中的 Fourier 位置变换，则当前空间分支主要为：
+设 $P_i$ 表示实现中的 Fourier 位置变换，则当前空间分支主要为：
 
-\[
+$$
 M=\frac1N\sum_j(P_j\phi(k_j))v_j^\top\in\mathbb R^{48\times24},\quad
 \mu_k=\frac1N\sum_j\phi(k_j),
-\]
-\[
+$$
+
+$$
 o_i=\frac{P_i\phi(q_i)M}{\phi(q_i)\mu_k+\epsilon}+\operatorname{LePE}(v)_i.
-\]
+$$
 
 每个 numerator 摘要为 1152 个浮点数，FP32 下 4.5 KiB；还需要 48 维 key 均值，合计约 4.69 KiB/头/来源集合。24×24 更接近通道注意力矩阵的尺寸。
 
 质量加权必须让分子和分母使用一致的权重与计数，例如：
 
-\[
+$$
 M_w=\frac{\sum_j w_j(P_j\phi(k_j))v_j^\top}{\sum_jw_j},\qquad
 \mu_w=\frac{\sum_jw_j\phi(k_j)}{\sum_jw_j}.
-\]
+$$
 
 仅平均条带 KV、混合不同长度记忆却保留原分母，会改变输出尺度；等权合并 H/L 两个均值也不等于按 2:1 面积比例的全局聚合。通道门控的广播轴还必须明确。
 
-来源：[HedgehogFeatureMap](G:/VSCODE-G/SAR_Sequence_Restore/basicsr/archs/ucan_arch.py:25)、[SDFL.spatial_brand](G:/VSCODE-G/SAR_Sequence_Restore/basicsr/archs/ucan_arch.py:591)、[DFRL](G:/VSCODE-G/SAR_Sequence_Restore/basicsr/archs/ucan_arch.py:697)。
+来源：[HedgehogFeatureMap](../basicsr/archs/ucan_arch.py "原引用：第 25 行")、[SDFL.spatial_brand](../basicsr/archs/ucan_arch.py "原引用：第 591 行")、[DFRL](../basicsr/archs/ucan_arch.py "原引用：第 697 行")。
 
 原始 [Hedgehog 论文](https://arxiv.org/abs/2402.04347) 支持通过可学习特征映射改善 softmax 式选择性，不证明该记忆就是 SAR 的真实 PSF 字典。对单一线性空间注意力，矩阵秩仍受特征维数约束；提高经验有效秩，不等于任意 N 下等价于 full softmax。位置变换后的分子可有符号，也不能直接解释成非负概率加权的物理散射传播。
 
-母图横向加宽会改变展平位置 \(p=yW+x\) 的行距。代码按一维位置生成 Fourier 编码，128 裁剪、512 整帧和 1536 宽母图的相对几何编码不完全等同；跨帧聚合不能简单相加各自局部坐标下的 KV。当前 max_sequence_length 用于频率选择，不是硬截断，但长序列外推仍需要实验。
+母图横向加宽会改变展平位置 $p=yW+x$ 的行距。代码按一维位置生成 Fourier 编码，128 裁剪、512 整帧和 1536 宽母图的相对几何编码不完全等同；跨帧聚合不能简单相加各自局部坐标下的 KV。当前 max_sequence_length 用于频率选择，不是硬截断，但长序列外推仍需要实验。
 
 ### 4.3 不能在接收块平移后直接复用旧窗口图
 
@@ -259,17 +261,17 @@ M_w=\frac{\sum_j w_j(P_j\phi(k_j))v_j^\top}{\sum_jw_j},\qquad
 
 ### 4.4 数值故障的真实证据与最小修复
 
-已有 [故障报告](G:/VSCODE-G/SAR_Sequence_Restore/docs/UCAN_nonfinite_diagnosis_20261109.md) 和 [逐算子 JSON](G:/VSCODE-G/SAR_Sequence_Restore/docs/diagnostics/ucan_nonfinite/iter_129507_rank_1_first_operator.json) 记录：Q=2 在 129507 步的 rank1 前向失败；首个非有限输出是 `rg_2.residual_group.norm_out` 的 FP32 LayerNorm。其输入仍有限，最大幅值约 \(2.86\times10^{20}\)。连续五个 LKSA 前后幅值明显放大；同一 LayerNorm 的 FP64 诊断输出有限。
+已有 [故障报告](UCAN_nonfinite_diagnosis_20261109.md) 和 [逐算子 JSON](diagnostics/ucan_nonfinite/iter_129507_rank_1_first_operator.json) 记录：Q=2 在 129507 步的 rank1 前向失败；首个非有限输出是 `rg_2.residual_group.norm_out` 的 FP32 LayerNorm。其输入仍有限，最大幅值约 $2.86\times10^{20}$。连续五个 LKSA 前后幅值明显放大；同一 LayerNorm 的 FP64 诊断输出有限。
 
-因此，**乘性卷积分支放大是有直接证据的风险；“SAR 高峭度必然导致 \(x^{2^L}\) 增长、FP16 随后触发 Hedgehog exp 溢出”不是本次事实。** 实际 LKSA 为：
+因此，**乘性卷积分支放大是有直接证据的风险；“SAR 高峭度必然导致 $x^{2^L}$ 增长、FP16 随后触发 Hedgehog exp 溢出”不是本次事实。** 实际 LKSA 为：
 
-\[
+$$
 y=\mathrm{channel}(x)\odot[\mathrm{large\_kn}(x)+\mathrm{conv3}(x)].
-\]
+$$
 
 其中含偏置、GELU、SGFN、残差和可学习系数，不是简单齐次二阶递推。二次上界不能推出每层必然达到该增长率。当前 Hedgehog 使用稳定 softmax 实现，不是报告所写的裸 exp 链条。
 
-下一轮只比较最小候选：原式；在第二乘数上加 \(\gamma\tanh(a/\gamma)\)；或在实际 LKSA 分支入口做归一化/残差缩放，二者先分开。应保留 `channel(x)` 分支，不能把报告的 \(x\odot F(x)\) 直接当源码替换位置。加载相同参数键只表示 checkpoint 结构兼容，不意味着函数不变、精度不降或全网稳定性已获保证。RMSNorm 自身的平方统计也须放在幅值已经失控之前。
+下一轮只比较最小候选：原式；在第二乘数上加 $\gamma\tanh(a/\gamma)$；或在实际 LKSA 分支入口做归一化/残差缩放，二者先分开。应保留 `channel(x)` 分支，不能把报告的 $x\odot F(x)$ 直接当源码替换位置。加载相同参数键只表示 checkpoint 结构兼容，不意味着函数不变、精度不降或全网稳定性已获保证。RMSNorm 自身的平方统计也须放在幅值已经失控之前。
 
 该修复应先重放已有失败现场与正常样本，再做短程延续；不需要从头重跑 400k 来定位已知问题。短程无 NaN 仅表示在所测范围内有效。
 
@@ -379,7 +381,7 @@ y=\mathrm{channel}(x)\odot[\mathrm{large\_kn}(x)+\mathrm{conv3}(x)].
 3. **按区域与边界距离：** 真正索引投影的名义 H/L 掩膜、边界带及 L 内部；记录距 H/L 边界、距帧边界、帧内坐标。同一条带跨窗曲线只能作为诊断关联。
 4. **一致性：** 重叠区归一化 MAE、输入/GT 的对应参考值、接缝梯度误差。母图 OCE=0 是构造结果，不是验证物理机制的独立指标；不能用 OCE 越低越好单独挑模型。
 5. **散射目标保真：** 依据 GT 预定义亮点/弱点 ROI，报告峰值幅度误差、位置偏移、局部能量、目标漏检和新增伪亮点；有可靠标签时报告固定虚警率下检测率。不得利用模型输出反向挑 ROI。
-6. **SAR 点目标指标：** PSLR、ISLR、主瓣宽度/分辨率用于已知孤立点目标或受控仿真，距离/方位分开。定义固定主瓣/旁瓣区域；用强度计算时明确 \(I=|z|^2\)。不在任意城市纹理上声称测得系统 PSF。
+6. **SAR 点目标指标：** PSLR、ISLR、主瓣宽度/分辨率用于已知孤立点目标或受控仿真，距离/方位分开。定义固定主瓣/旁瓣区域；用强度计算时明确 $I=|z|^2$。不在任意城市纹理上声称测得系统 PSF。
 7. **纹理与辐射：** 同质区域的均值、方差、分布/相关长度、边缘梯度及局部对比度。ENL 只能在适用的同质强度区域使用，变大可能只是过平滑。绝对辐射与相位/相干性需保留物理幅度/复数数据后另评，当前 PNG 不支持。
 8. **频谱：** 对同一位置的恢复残差做二维方向性谱分析，作为描述性指标。未经前向模型定位的高频环带距离不能命名为“三次谐波抑制比”。
 9. **效率：** 完整九帧产物的参数、MACs/FLOPs 口径、实际 dtype/backend、单序列延迟、吞吐、峰值 allocated/reserved 显存；网络纯计算与读图/拼接/写图端到端分别记录。
@@ -491,11 +493,11 @@ y=\mathrm{channel}(x)\odot[\mathrm{large\_kn}(x)+\mathrm{conv3}(x)].
 关键实现约束：
 
 - 现有 loader 的独立随机 128 crop 不能直接用于跨帧几何融合。序列裁剪要依据同一全局坐标；相同的“各帧局部 left”不代表同一地面。
-- 场景质量掩膜从真实生成索引构造；成像后可另记录连续来源影响近似图。若用 \(\sum_j|A_{ij}|^2m_j/\sum_j|A_{ij}|^2\) 表示 H 来源暴露，应标注为忽略相干交叉项的代理，不称为真实有效 Q。
+- 场景质量掩膜从真实生成索引构造；成像后可另记录连续来源影响近似图。若用 $\sum_j|A_{ij}|^2m_j/\sum_j|A_{ij}|^2$ 表示 H 来源暴露，应标注为忽略相干交叉项的代理，不称为真实有效 Q。
 - 第一版 fold 使用等权/固定来源，不引入可学习权重，也不把 GT 品质排序用作推理权重。
 - 保持原始 loss；新增 wavelet、OCE 等损失必须独立消融。纯母图展开下 OCE 恒零，其损失没有新增训练信息。
 - 现有测试 YAML 指向 `net_g_latest.pth`；历史记录中它对应 H/L 400k，最优 PSNR 却是 300k。按验证指标预先指定 checkpoint，不能在最终测试上改选。
-- 根据 [检查点记录](G:/VSCODE-G/SAR_Sequence_Restore/docs/UCAN_checkpoint_retention_20261107.md:5)，H/L 最优 PSNR 为 300k、24.6824 dB，最优 SSIM 为 200k、0.7913；Q=2 最优在 110k、24.5978/0.7921，最后保存 120k。它们是历史验证值，既非本轮重现，也非训练预算相等的两套完成模型。
+- 根据 [检查点记录](UCAN_checkpoint_retention_20261107.md "原引用：第 5 行")，H/L 最优 PSNR 为 300k、24.6824 dB，最优 SSIM 为 200k、0.7913；Q=2 最优在 110k、24.5978/0.7921，最后保存 120k。它们是历史验证值，既非本轮重现，也非训练预算相等的两套完成模型。
 - 不因纯参数少就默认 full-mother fits 24 GB。首先测一次前向的 backend 和峰值；若 OOM，可将同一组诊断全部降为相同 64×1536 长条作有限范围的机制研究，单独标注。随后再研究窗口分块等执行层优化；普通整网切块会改变全局聚合，不能冒充完整母图等价实现。
 
 ## 11. 如果现在只做一项：冻结权重的规范母图与重叠融合诊断
