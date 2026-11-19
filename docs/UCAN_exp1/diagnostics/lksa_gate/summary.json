@@ -1,0 +1,147 @@
+{
+  "failure_cases": [
+    {
+      "case": "iter_129507_rank_0.pth",
+      "gamma": null,
+      "forward_ok": true,
+      "forward_error": null,
+      "loss": 0.056846462190151215,
+      "grad_finite": true,
+      "grad_l2_norm": 0.11613865331887216,
+      "lksa_gate_abs_max": 30.962860107421875,
+      "lksa_out_abs_max": 849.8904418945312,
+      "five_step_stable": true,
+      "five_step_losses": [
+        0.056846462190151215,
+        0.05566604062914848,
+        0.0540953204035759,
+        0.053892411291599274,
+        0.05365022271871567
+      ]
+    },
+    {
+      "case": "iter_129507_rank_0.pth",
+      "gamma": 2.0,
+      "forward_ok": true,
+      "forward_error": null,
+      "loss": 0.05804160237312317,
+      "grad_finite": true,
+      "grad_l2_norm": 0.08125960711258744,
+      "lksa_gate_abs_max": 2.0,
+      "lksa_out_abs_max": 101.66202545166016,
+      "five_step_stable": true,
+      "five_step_losses": [
+        0.05804160237312317,
+        0.057485293596982956,
+        0.05671968311071396,
+        0.05601641535758972,
+        0.05516430735588074
+      ]
+    },
+    {
+      "case": "iter_129507_rank_0.pth",
+      "gamma": 4.0,
+      "forward_ok": true,
+      "forward_error": null,
+      "loss": 0.057602327316999435,
+      "grad_finite": true,
+      "grad_l2_norm": 0.08299265511232463,
+      "lksa_gate_abs_max": 3.999887704849243,
+      "lksa_out_abs_max": 193.2744140625,
+      "five_step_stable": true,
+      "five_step_losses": [
+        0.057602327316999435,
+        0.05700051784515381,
+        0.05590730533003807,
+        0.054778870195150375,
+        0.054187189787626266
+      ]
+    },
+    {
+      "case": "iter_129507_rank_1.pth",
+      "gamma": null,
+      "forward_ok": false,
+      "forward_error": "ValueError('Input contains NaN or Inf.')",
+      "loss": null,
+      "grad_finite": false,
+      "grad_l2_norm": null,
+      "lksa_gate_abs_max": null,
+      "lksa_out_abs_max": null,
+      "five_step_stable": false,
+      "five_step_losses": []
+    },
+    {
+      "case": "iter_129507_rank_1.pth",
+      "gamma": 2.0,
+      "forward_ok": true,
+      "forward_error": null,
+      "loss": 0.050180912017822266,
+      "grad_finite": true,
+      "grad_l2_norm": 0.12933955100567865,
+      "lksa_gate_abs_max": 2.0,
+      "lksa_out_abs_max": 676.3084716796875,
+      "five_step_stable": true,
+      "five_step_losses": [
+        0.050180912017822266,
+        0.049620579928159714,
+        0.04891681671142578,
+        0.048136986792087555,
+        0.04727380722761154
+      ]
+    },
+    {
+      "case": "iter_129507_rank_1.pth",
+      "gamma": 4.0,
+      "forward_ok": true,
+      "forward_error": null,
+      "loss": 0.050034672021865845,
+      "grad_finite": true,
+      "grad_l2_norm": 0.1281642390080756,
+      "lksa_gate_abs_max": 4.0,
+      "lksa_out_abs_max": 1407.494384765625,
+      "five_step_stable": true,
+      "five_step_losses": [
+        0.050034672021865845,
+        0.049474235624074936,
+        0.04876789450645447,
+        0.0479392483830452,
+        0.04698627442121506
+      ]
+    }
+  ],
+  "normal_samples": [
+    {
+      "gamma": null,
+      "num_frames": 180,
+      "psnr_mean": 24.30852608393158,
+      "ssim_mean": 0.7893852073396794,
+      "raw_gate_abs_p50": 0.41538217663764954,
+      "raw_gate_abs_p95": 1.7786360144615165,
+      "raw_gate_abs_p99": 3.9637723779678327,
+      "raw_gate_abs_p999": 9.90727589702682,
+      "raw_gate_abs_max": 165.8875274658203
+    },
+    {
+      "gamma": 2.0,
+      "num_frames": 180,
+      "psnr_mean": 24.270738537459774,
+      "ssim_mean": 0.788253255031612,
+      "raw_gate_abs_p50": 0.41216105222702026,
+      "raw_gate_abs_p95": 1.7461750030517535,
+      "raw_gate_abs_p99": 3.8371632266044613,
+      "raw_gate_abs_p999": 9.598112598419455,
+      "raw_gate_abs_max": 66.67667388916016
+    },
+    {
+      "gamma": 4.0,
+      "num_frames": 180,
+      "psnr_mean": 24.297412725107257,
+      "ssim_mean": 0.7894208040323796,
+      "raw_gate_abs_p50": 0.413719579577446,
+      "raw_gate_abs_p95": 1.762058281898498,
+      "raw_gate_abs_p99": 3.8931172609329208,
+      "raw_gate_abs_p999": 9.69431431675124,
+      "raw_gate_abs_max": 72.80364990234375
+    }
+  ]
+}

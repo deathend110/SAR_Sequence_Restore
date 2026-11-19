@@ -1,6 +1,8 @@
 """SAR 模型共用的分片验证：每张图仅处理一次，结束后归约全体指标。"""
+import json
 import time
 from os import path as osp
+from pathlib import Path
 
 import torch
 from torch import distributed as dist
@@ -75,6 +77,17 @@ class DistributedValidationMixin:
                 for name, value in self.metric_results.items():
                     self._update_best_metric_result(dataset_name, name, value, current_iter)
                 self._log_validation_metric_values(current_iter, dataset_name, tb_logger)
+                exp_root = self.opt['path'].get('experiments_root')
+                if exp_root is not None:
+                    hist_path = Path(exp_root) / 'val_history.json'
+                    history = json.loads(hist_path.read_text(encoding='utf-8')) if hist_path.is_file() else []
+                    history.append({
+                        'iter': int(current_iter),
+                        'dataset': dataset_name,
+                        'total_frames': int(totals[-1]),
+                        'metrics': dict(self.metric_results),
+                    })
+                    hist_path.write_text(json.dumps(history, ensure_ascii=False, indent=2), encoding='utf-8')
         if rank == 0:
             logger.info(f'End distributed validation {dataset_name}: {int(totals[-1])} images, '
                         f'{time.perf_counter() - start:.2f} seconds.')

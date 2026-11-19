@@ -495,9 +495,12 @@ class LKSA(nn.Module):
         53: dict(core=5, dilate=3, extra=17),
     }
 
-    def __init__(self, dim: int, k: int = 35, ratio: int = 4):
+    def __init__(self, dim: int, k: int = 35, ratio: int = 4, lksa_gate_gamma: float | None = None):
         super().__init__()
         assert k in self.STATIC_SPECS, f"Unsupported k={k}"
+        if lksa_gate_gamma is not None and lksa_gate_gamma <= 0:
+            raise ValueError(f"lksa_gate_gamma must be positive, got {lksa_gate_gamma}")
+        self.gate_gamma = float(lksa_gate_gamma) if lksa_gate_gamma is not None else None
         spec = self.STATIC_SPECS[k]
         core_k = spec["core"]
         dil = spec["dilate"]
@@ -544,7 +547,11 @@ class LKSA(nn.Module):
         y = self.conv_big_h(y)
         large_kn = self.conv_big_v(y)
 
-        out = self.channel(x) * (large_kn + self.conv3(x))
+        # 有界门控：保持 channel 分支不变，抑制乘性分支在异常样本上的指数放大。
+        gate = large_kn + self.conv3(x)
+        if self.gate_gamma is not None:
+            gate = self.gate_gamma * torch.tanh(gate / self.gate_gamma)
+        out = self.channel(x) * gate
 
         return out
 
@@ -1013,7 +1020,8 @@ class BasicLayer(nn.Module):
                  mhsa_num_heads=2,
                  dfl_num_heads=1,
                  conv_depth=5,
-                 share='N'):
+                 share='N',
+                 lksa_gate_gamma: float | None = None):
         super().__init__()
         self.dim = dim
         self.input_resolution = input_resolution
@@ -1023,6 +1031,7 @@ class BasicLayer(nn.Module):
         self.share = share
         self.conv_depth = conv_depth
         self.large_window_size = large_window_size
+        self.lksa_gate_gamma = lksa_gate_gamma
 
         # High performace block
         self.norm1 = norm_layer(dim)
@@ -1045,7 +1054,7 @@ class BasicLayer(nn.Module):
         ])
 
         self.mbconv = MBConv(dim, dim)
-        self.blocks_2 = nn.ModuleList([LKSA(dim=16, k=23) for i in range(self.conv_depth)])
+        self.blocks_2 = nn.ModuleList([LKSA(dim=16, k=23, lksa_gate_gamma=lksa_gate_gamma) for i in range(self.conv_depth)])
         self.block_conv = nn.ModuleList(
             [SGFN(in_features=dim, hidden_features=int(dim * mlp_ratio)) for i in range(self.conv_depth)])
         self.block_merge = nn.ModuleList(
@@ -1191,7 +1200,8 @@ class ResidualGroup(nn.Module):
                  mhsa_num_heads=2,
                  dfl_num_heads=1,
                  resi_connection='1conv',
-                 share='N'):
+                 share='N',
+                 lksa_gate_gamma: float | None = None):
         super(ResidualGroup, self).__init__()
 
         self.dim = dim
@@ -1211,7 +1221,8 @@ class ResidualGroup(nn.Module):
             use_checkpoint=use_checkpoint,
             mhsa_num_heads=mhsa_num_heads,
             dfl_num_heads=dfl_num_heads,
-            share=share)
+            share=share,
+            lksa_gate_gamma=lksa_gate_gamma)
 
         # build the last conv layer in each residual group
         if resi_connection == '1conv':
@@ -1295,6 +1306,7 @@ class UCAN(nn.Module):
                  img_range=1.,
                  upsampler='pixelshuffledirect',
                  resi_connection='1conv',
+                 lksa_gate_gamma: float | None = None,
                  **kwargs):
         super(UCAN, self).__init__()
         num_in_ch = in_chans
@@ -1302,6 +1314,7 @@ class UCAN(nn.Module):
         num_feat = 64
         self.img_range = img_range
         self.use_checkpoint = use_checkpoint
+        self.lksa_gate_gamma = lksa_gate_gamma
         if in_chans == 3:
             rgb_mean = (0.4488, 0.4371, 0.4040)
             self.mean = torch.Tensor(rgb_mean).view(1, 3, 1, 1)
@@ -1359,7 +1372,8 @@ class UCAN(nn.Module):
             img_size=img_size,
             patch_size=patch_size,
             resi_connection=resi_connection,
-            share=share[0])
+            share=share[0],
+            lksa_gate_gamma=lksa_gate_gamma)
         self.rg_2 = ResidualGroup(
             dim=embed_dim,
             input_resolution=(patches_resolution[0], patches_resolution[1]),
@@ -1376,7 +1390,8 @@ class UCAN(nn.Module):
             img_size=img_size,
             patch_size=patch_size,
             resi_connection=resi_connection,
-            share=share[1])
+            share=share[1],
+            lksa_gate_gamma=lksa_gate_gamma)
         self.rg_3 = ResidualGroup(
             dim=embed_dim,
             input_resolution=(patches_resolution[0], patches_resolution[1]),
@@ -1393,7 +1408,8 @@ class UCAN(nn.Module):
             img_size=img_size,
             patch_size=patch_size,
             resi_connection=resi_connection,
-            share=share[2])
+            share=share[2],
+            lksa_gate_gamma=lksa_gate_gamma)
         self.rg_4 = ResidualGroup(
             dim=embed_dim,
             input_resolution=(patches_resolution[0], patches_resolution[1]),
@@ -1410,7 +1426,8 @@ class UCAN(nn.Module):
             img_size=img_size,
             patch_size=patch_size,
             resi_connection=resi_connection,
-            share=share[3])
+            share=share[3],
+            lksa_gate_gamma=lksa_gate_gamma)
 
         self.norm = norm_layer(self.num_features)
 

@@ -46,3 +46,6 @@ class EnlargedSampler(Sampler):
 
     def set_epoch(self, epoch):
         self.epoch = epoch
+        # 若数据集支持同步 epoch（用于配对实验的确定性裁剪计划），自动透传。
+        if hasattr(self.dataset, 'set_epoch'):
+            self.dataset.set_epoch(epoch)

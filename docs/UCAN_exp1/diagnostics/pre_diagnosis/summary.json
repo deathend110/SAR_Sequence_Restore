@@ -1,0 +1,74 @@
+{
+  "checkpoint": "experiments/ucan_sar_single/models/net_g_300000.pth",
+  "split_file": "docs/splits/sar_single_seed42/val.txt",
+  "num_sequences": 82,
+  "num_frames": 738,
+  "overall": {
+    "input": {
+      "psnr_mean": 20.70258032291447,
+      "ssim_mean": 0.6853128530350211
+    },
+    "A": {
+      "psnr_mean": 24.682438073865175,
+      "ssim_mean": 0.7899844406851234
+    },
+    "A_fusion": {
+      "psnr_mean": 24.732521710524047,
+      "ssim_mean": 0.7906447890860021
+    }
+  },
+  "f4": {
+    "input": {
+      "psnr_mean": 20.427311361397418,
+      "ssim_mean": 0.6640129507858821
+    },
+    "A": {
+      "psnr_mean": 24.340459297904246,
+      "ssim_mean": 0.7700614267292395
+    },
+    "A_fusion": {
+      "psnr_mean": 24.360934387129053,
+      "ssim_mean": 0.7705887322146242
+    }
+  },
+  "f4_center_k1_k2": {
+    "input": {
+      "psnr_mean": 20.33558210670775,
+      "ssim_mean": 0.6574494676514042
+    },
+    "A": {
+      "psnr_mean": 24.30586251146275,
+      "ssim_mean": 0.7648430646621281
+    },
+    "A_fusion": {
+      "psnr_mean": 24.280023778391143,
+      "ssim_mean": 0.7646526106025677
+    }
+  },
+  "ground_s4_7_mean": {
+    "input": {
+      "psnr_mean": 20.44528088379835,
+      "ssim_mean": 0.6643840333049853
+    },
+    "A": {
+      "psnr_mean": 24.380952434807103,
+      "ssim_mean": 0.7699553846591223
+    },
+    "A_fusion": {
+      "psnr_mean": 24.44293818425081,
+      "ssim_mean": 0.7709215307902094
+    }
+  },
+  "overlap_consistency_mad": {
+    "input": 9.45004549893466e-05,
+    "GT": 6.277756786134977e-05,
+    "A": 1.5592324918759637,
+    "A_fusion": 0.0
+  },
+  "latency_9frames_ms": {
+    "A_p50": 3593.5090869897977,
+    "A_p95": 7334.98979274882,
+    "A_fusion_p50": 3609.5196114620194,
+    "A_fusion_p95": 7348.778406134807
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "split_scheme": "Scheme A: Scene-disjoint independent split (v1)",
+  "data_root": "/data/cjz/SAR_Transformer/dataset_range_2dsft/range_2d_sft_qh2p5_ql1p5_s1_fr0p9_fa0p5_phi0_lp0p99_hp99p9_roi600_eb64",
+  "total_sequences": 4098,
+  "total_frames": 36882,
+  "splits": {
+    "train": {
+      "scenes": {
+        "bangkok": 688,
+        "city2_histeq": 484,
+        "filed": 696,
+        "port": 828,
+        "suburb": 648
+      },
+      "num_sequences": 3344,
+      "num_frames": 30096,
+      "ratio": 0.8160078086871645
+    },
+    "val": {
+      "scenes": {
+        "sar_figure": 270
+      },
+      "num_sequences": 270,
+      "num_frames": 2430,
+      "ratio": 0.06588579795021962
+    },
+    "test": {
+      "scenes": {
+        "city1_histeq": 484
+      },
+      "num_sequences": 484,
+      "num_frames": 4356,
+      "ratio": 0.11810639336261591
+    }
+  },
+  "sha256": {
+    "train.txt": "afd41229bd653a2e695617c6cbe94d346219def5385fbdfc34ffb35794b4cf20",
+    "val.txt": "a489ed61e798fc6a8a28eaffbff4f3ca246ca9ac18045c39a734c8c72ed1050c",
+    "test.txt": "e7b5a68356018e44b81d55cb0afd0481127eb96b7b976f441255c0155bb3a952",
+    "manifest.json": "d96b78b4cf011c4bcdd9868155edfde8ed73d51a278793e7c0e387b64974e67d"
+  },
+  "hlh_geometry": {
+    "logic_length": 1536,
+    "valid_margin": 344,
+    "patch_size": 512,
+    "step": 128,
+    "n_frames": 9,
+    "h_intervals_0based_inclusive_exclusive": [
+      [
+        0,
+        513
+      ],
+      [
+        1025,
+        1536
+      ]
+    ],
+    "l_intervals_0based_inclusive_exclusive": [
+      [
+        513,
+        1025
+      ]
+    ],
+    "h_intervals_1based_inclusive": [
+      [
+        1,
+        513
+      ],
+      [
+        1026,
+        1536
+      ]
+    ],
+    "l_intervals_1based_inclusive": [
+      [
+        514,
+        1025
+      ]
+    ],
+    "strip_quality_s0_to_s11": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.0078125,
+      0.0,
+      0.0,
+      0.0,
+      0.9921875,
+      1.0,
+      1.0,
+      1.0
+    ]
+  }
+}

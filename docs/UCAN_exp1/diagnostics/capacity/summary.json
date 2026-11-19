@@ -1,0 +1,127 @@
+{
+  "gpus": [
+    "NVIDIA GeForce RTX 4090",
+    "NVIDIA GeForce RTX 4090"
+  ],
+  "train_B1_T9_H64_W512_FP32": [
+    {
+      "group": "A",
+      "mode": "no_ckpt",
+      "use_checkpoint": false,
+      "checkpoint_rg_pair": false,
+      "oom": true
+    },
+    {
+      "group": "A",
+      "mode": "block_ckpt",
+      "use_checkpoint": true,
+      "checkpoint_rg_pair": false,
+      "oom": true
+    },
+    {
+      "group": "A",
+      "mode": "rg_pair_ckpt",
+      "use_checkpoint": false,
+      "checkpoint_rg_pair": true,
+      "oom": true
+    },
+    {
+      "group": "A",
+      "mode": "both_ckpt",
+      "use_checkpoint": true,
+      "checkpoint_rg_pair": true,
+      "oom": true
+    },
+    {
+      "group": "B",
+      "mode": "no_ckpt",
+      "use_checkpoint": false,
+      "checkpoint_rg_pair": false,
+      "oom": true
+    },
+    {
+      "group": "B",
+      "mode": "block_ckpt",
+      "use_checkpoint": true,
+      "checkpoint_rg_pair": false,
+      "oom": true
+    },
+    {
+      "group": "B",
+      "mode": "rg_pair_ckpt",
+      "use_checkpoint": false,
+      "checkpoint_rg_pair": true,
+      "oom": true
+    },
+    {
+      "group": "B",
+      "mode": "both_ckpt",
+      "use_checkpoint": true,
+      "checkpoint_rg_pair": true,
+      "oom": true
+    },
+    {
+      "group": "C",
+      "mode": "no_ckpt",
+      "use_checkpoint": false,
+      "checkpoint_rg_pair": false,
+      "oom": true
+    },
+    {
+      "group": "C",
+      "mode": "block_ckpt",
+      "use_checkpoint": true,
+      "checkpoint_rg_pair": false,
+      "oom": true
+    },
+    {
+      "group": "C",
+      "mode": "rg_pair_ckpt",
+      "use_checkpoint": false,
+      "checkpoint_rg_pair": true,
+      "oom": true
+    },
+    {
+      "group": "C",
+      "mode": "both_ckpt",
+      "use_checkpoint": true,
+      "checkpoint_rg_pair": true,
+      "oom": true
+    },
+    {
+      "group": "D1",
+      "mode": "no_ckpt",
+      "use_checkpoint": false,
+      "checkpoint_rg_pair": false,
+      "oom": true
+    },
+    {
+      "group": "D1",
+      "mode": "block_ckpt",
+      "use_checkpoint": true,
+      "checkpoint_rg_pair": false,
+      "oom": true
+    },
+    {
+      "group": "D1",
+      "mode": "rg_pair_ckpt",
+      "use_checkpoint": false,
+      "checkpoint_rg_pair": true,
+      "oom": true
+    },
+    {
+      "group": "D1",
+      "mode": "both_ckpt",
+      "use_checkpoint": true,
+      "checkpoint_rg_pair": true,
+      "oom": true
+    }
+  ],
+  "val_270seq_512x512_ddp": {
+    "val_sequences": 270,
+    "val_frames": 2430,
+    "elapsed_s": 570.73779296875,
+    "peak_alloc_gib": 9.47744369506836,
+    "peak_reserved_gib": 10.333984375
+  }
+}
