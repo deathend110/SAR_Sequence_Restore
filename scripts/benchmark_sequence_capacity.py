@@ -238,7 +238,8 @@ def main():
             if 'train_B1_T9_H64_W512_FP32' in prev_payload:
                 payload['prev_whole_batch_oom_records'] = prev_payload['train_B1_T9_H64_W512_FP32']
             summary_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding='utf-8')
-            print(json.dumps(payload, ensure_ascii=False, indent=2))
+            print(json.dumps(payload, ensure_ascii=False, indent=2), flush=True)
+        dist.barrier()
     finally:
         dist.destroy_process_group()
 
