@@ -1,0 +1,93 @@
+# Stage 2：在 scene_split_v1 独立场景划分上训练统一 LKSA 稳定底座的单帧基线 A_init。
+# 仅使用两张 4090（CUDA_VISIBLE_DEVICES=0,1），global batch = 12（per GPU = 6）。
+name: ucan_a_init_scene_v1
+model_type: UCANModel
+scale: 1
+num_gpu: 2
+manual_seed: 42
+final_test_opt: ~
+
+datasets:
+  train:
+    name: sar_train
+    type: SARSingleDataset
+    dataroot_lq: /data/cjz/SAR_Transformer/dataset_range_2dsft/range_2d_sft_qh2p5_ql1p5_s1_fr0p9_fa0p5_phi0_lp0p99_hp99p9_roi600_eb64/LQ
+    dataroot_gt: /data/cjz/SAR_Transformer/dataset_range_2dsft/range_2d_sft_qh2p5_ql1p5_s1_fr0p9_fa0p5_phi0_lp0p99_hp99p9_roi600_eb64/GT
+    split_file: docs/UCAN_exp1/splits/scene_split_v1/train.txt
+    gt_size: 128
+    use_shuffle: true
+    num_worker_per_gpu: 4
+    batch_size_per_gpu: 6
+    dataset_enlarge_ratio: 1
+    prefetch_mode: ~
+  val:
+    name: sar_val
+    type: SARSingleDataset
+    dataroot_lq: /data/cjz/SAR_Transformer/dataset_range_2dsft/range_2d_sft_qh2p5_ql1p5_s1_fr0p9_fa0p5_phi0_lp0p99_hp99p9_roi600_eb64/LQ
+    dataroot_gt: /data/cjz/SAR_Transformer/dataset_range_2dsft/range_2d_sft_qh2p5_ql1p5_s1_fr0p9_fa0p5_phi0_lp0p99_hp99p9_roi600_eb64/GT
+    split_file: docs/UCAN_exp1/splits/scene_split_v1/val.txt
+
+network_g:
+  type: UCAN
+  upscale: 1
+  in_chans: 1
+  img_size: 128
+  embed_dim: 48
+  window_size: 16
+  img_range: 1.0
+  mlp_ratio: 1.0
+  conv_depth: 5
+  share: [N, F, N, F]
+  mhsa_num_heads: 2
+  dfl_num_heads: 1
+  use_checkpoint: false
+  upsampler: ~
+  resi_connection: 1conv
+  lksa_gate_gamma: 4.0  # Stage 0.2 验证通过的统一稳定门控上限
+
+path:
+  pretrain_network_g: ~
+  strict_load_g: true
+  param_key_g: params
+  resume_state: ~
+
+train:
+  total_iter: 200000
+  warmup_iter: -1
+  ema_decay: 0
+  optim_g:
+    type: Adam
+    lr: !!float 3.75e-4
+    weight_decay: 0
+    betas: [0.9, 0.99]
+  scheduler:
+    type: MultiStepLR
+    milestones: [100000, 150000, 175000, 190000]
+    gamma: 0.5
+  pixel_opt:
+    type: CharbonnierLoss
+    loss_weight: 1.0
+    reduction: mean
+    eps: !!float 1e-9
+
+val:
+  val_freq: 10000
+  save_img: false
+  pbar: false
+  metrics:
+    psnr:
+      type: calculate_psnr
+      crop_border: 0
+      test_y_channel: false
+    ssim:
+      type: calculate_ssim
+      crop_border: 0
+      test_y_channel: false
+
+logger:
+  print_freq: 500
+  save_checkpoint_freq: 10000
+  use_tb_logger: true
+  wandb:
+    project: ~
+    resume_id: ~
