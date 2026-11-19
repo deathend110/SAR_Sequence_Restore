@@ -54,25 +54,38 @@ class SequenceDistributedValidationMixin:
     def _run_sequence_validation(self, dataset, dataset_name, current_iter, tb_logger, save_img, rank, world_size, is_dist):
         logger = get_root_logger()
         exp_root = self.opt['path'].get('experiments_root')
-        # BasicSR train.py 会在 total_iter 验证并保存 latest 后再次以 current_iter = total_iter + 1 触发验证，
-        # 若该步刚验证过且无需保存图像，则直接跳过重复推理。
+        # BasicSR train.py 在结束全部 epoch 循环后常以 current_iter = total_iter + 1 或 +2 再次触发验证，
+        # 若已在 total_iter 完成验证且无需保存图像，则直接跳过重复推理。
+        train_opt = self.opt.get('train') or {}
+        val_opt = self.opt.get('val') or {}
+        total_iter = train_opt.get('total_iter')
+        val_freq = val_opt.get('val_freq')
         if (
             self.opt.get('is_train')
             and not save_img
-            and exp_root is not None
-            and 'train' in self.opt
-            and int(current_iter) == int(self.opt['train'].get('total_iter', -1)) + 1
+            and total_iter is not None
+            and int(current_iter) > int(total_iter)
+            and (
+                (val_freq and int(total_iter) % int(val_freq) == 0)
+                or (
+                    exp_root is not None
+                    and (Path(exp_root) / 'val_history.json').is_file()
+                )
+            )
         ):
+            if val_freq and int(total_iter) % int(val_freq) == 0:
+                if rank == 0:
+                    logger.info(f'Skip duplicate end-of-training validation at iter {current_iter}.')
+                return
             hist_path = Path(exp_root) / 'val_history.json'
-            if hist_path.is_file():
-                try:
-                    hist = json.loads(hist_path.read_text(encoding='utf-8'))
-                    if hist and int(hist[-1]['iter']) == int(self.opt['train']['total_iter']):
-                        if rank == 0:
-                            logger.info(f'Skip duplicate end-of-training validation at iter {current_iter}.')
-                        return
-                except Exception:
-                    pass
+            try:
+                hist = json.loads(hist_path.read_text(encoding='utf-8'))
+                if hist and int(hist[-1]['iter']) == int(total_iter):
+                    if rank == 0:
+                        logger.info(f'Skip duplicate end-of-training validation at iter {current_iter}.')
+                    return
+            except Exception:
+                pass
 
         metric_opts = self.opt['val'].get('metrics')
         metric_names = list(metric_opts) if metric_opts is not None else []

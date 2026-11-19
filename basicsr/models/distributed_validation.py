@@ -20,8 +20,8 @@ class DistributedValidationMixin:
         val_opt = self.opt.get('val')
         rank, world_size = dist.get_rank(), dist.get_world_size()
         logger = get_root_logger()
-        # BasicSR train.py 会在 total_iter 验证并保存 latest 后再次以 total_iter + 1 触发验证；
-        # 若刚在 total_iter 完成验证且无需保存图像，则直接跳过重复推理。
+        # BasicSR train.py 在结束全部 epoch 循环后可能以 total_iter + 1 或 +2 再次触发验证；
+        # 若已在 total_iter 完成验证且无需保存图像，则直接跳过重复推理。
         if (
             self.opt.get('is_train')
             and not save_img
@@ -29,7 +29,7 @@ class DistributedValidationMixin:
             and val_opt is not None
             and train_opt.get('total_iter') is not None
             and val_opt.get('val_freq')
-            and int(current_iter) == int(train_opt['total_iter']) + 1
+            and int(current_iter) > int(train_opt['total_iter'])
             and int(train_opt['total_iter']) % int(val_opt['val_freq']) == 0
         ):
             if rank == 0:
