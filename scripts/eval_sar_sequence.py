@@ -12,12 +12,15 @@
 import argparse
 import csv
 import json
+import os
 import time
+from datetime import timedelta
 from pathlib import Path
 
 import cv2
 import numpy as np
 import torch
+from torch import distributed as dist
 
 from basicsr.archs import build_network
 from basicsr.data.sar_sequence_dataset import compute_grid_quality_tensor
@@ -77,10 +80,14 @@ def region_psnr_ssim(pred_u8: np.ndarray, gt_u8: np.ndarray, c0: int, c1: int) -
 
 def build_fixed_scatter_rois(gt_dir: Path, split_file: Path, out_path: Path, top_k_per_seq: int = 3) -> list[dict]:
     """从测试集 F4 GT 确定性提取固定散射点 ROI（16x16 窗口，避开边界 8px）并持久化复用。"""
-    if out_path.is_file():
-        return json.loads(out_path.read_text(encoding='utf-8'))
-
     names = [line.strip() for line in split_file.read_text(encoding='utf-8').splitlines() if line.strip()]
+    if out_path.is_file():
+        rois = json.loads(out_path.read_text(encoding='utf-8'))
+        name_set = set(names)
+        if rois and not any(item.get('sequence_name') in name_set for item in rois):
+            raise ValueError(f'ROI file {out_path} does not match split {split_file}; pass a split-specific --roi-file')
+        return rois
+
     rois = []
     # 每隔一定步长抽样若干代表性序列，或覆盖全部序列的前 K 个局部强散射点
     for seq in names[::max(1, len(names) // 30)]:
@@ -181,6 +188,40 @@ def infer_sequence_float(
     return (acc / cnt)[0, :, 0].detach().cpu().numpy(), {}
 
 
+def _init_distributed_context() -> tuple[bool, int, int, torch.device, bool]:
+    """检测 torchrun 环境变量，按需初始化双卡并行评估上下文；单进程运行保持零改动。"""
+    world_size = int(os.environ.get('WORLD_SIZE', '1'))
+    if world_size <= 1:
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        return False, 0, 1, device, False
+
+    created_pg = False
+    if not dist.is_initialized():
+        backend = 'nccl' if torch.cuda.is_available() else 'gloo'
+        dist.init_process_group(backend=backend, timeout=timedelta(seconds=3600))
+        created_pg = True
+    rank = dist.get_rank()
+    world_size = dist.get_world_size()
+    local_rank = int(os.environ.get('LOCAL_RANK', str(rank)))
+    if torch.cuda.is_available():
+        torch.cuda.set_device(local_rank)
+        device = torch.device(f'cuda:{local_rank}')
+    else:
+        device = torch.device('cpu')
+    return True, rank, world_size, device, created_pg
+
+
+def _load_eval_checkpoint(net: torch.nn.Module, ckpt_path: Path, param_key: str | None):
+    """加载序列模型检查点；当评估无 token 模块的 mode A 时，兼容直接加载单帧 UCAN 权重。"""
+    ckpt = torch.load(ckpt_path, map_location='cpu', weights_only=True)
+    state = ckpt[param_key] if (param_key is not None and param_key in ckpt) else ckpt
+    has_backbone_prefix = any(k.startswith('backbone.') or k.startswith('module.backbone.') for k in state.keys())
+    if hasattr(net, 'load_backbone_state_dict') and getattr(net, 'token_interaction', None) is None and not has_backbone_prefix:
+        net.load_backbone_state_dict(state, strict=True)
+    else:
+        net.load_state_dict(state, strict=True)
+
+
 def evaluate_sequence_model(
     opt_path: Path,
     ckpt_path: Path,
@@ -194,254 +235,345 @@ def evaluate_sequence_model(
     benchmark_latency: bool = True,
     save_img: bool = False,
 ):
-    out_dir.mkdir(parents=True, exist_ok=True)
-    opt = yaml_load(str(opt_path))
-    ds_opt = next(iter(opt['datasets'].values()))
-    dataroot_lq = Path(ds_opt['dataroot_lq'])
-    dataroot_gt = Path(ds_opt['dataroot_gt'])
+    is_dist, rank, world_size, device, created_pg = _init_distributed_context()
+    try:
+        if rank == 0:
+            out_dir.mkdir(parents=True, exist_ok=True)
+        opt = yaml_load(str(opt_path))
+        ds_opt = next(iter(opt['datasets'].values()))
+        dataroot_lq = Path(ds_opt['dataroot_lq'])
+        dataroot_gt = Path(ds_opt['dataroot_gt'])
 
-    names = [line.strip() for line in split_file.read_text(encoding='utf-8').splitlines() if line.strip()]
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    net = build_network(opt['network_g']).to(device)
-    ckpt = torch.load(ckpt_path, map_location='cpu', weights_only=True)
-    param_key = opt['path'].get('param_key_g', 'params')
-    state = ckpt[param_key] if (param_key is not None and param_key in ckpt) else ckpt
-    net.load_state_dict(state, strict=True)
-    net.eval()
+        names = [line.strip() for line in split_file.read_text(encoding='utf-8').splitlines() if line.strip()]
+        net = build_network(opt['network_g']).to(device)
+        param_key = opt['path'].get('param_key_g', 'params')
+        _load_eval_checkpoint(net, ckpt_path, param_key)
+        net.eval()
 
-    total_params = sum(p.numel() for p in net.parameters())
-    psnr_opt = dict(type='calculate_psnr', crop_border=0, test_y_channel=False)
-    ssim_opt = dict(type='calculate_ssim', crop_border=0, test_y_channel=False)
+        total_params = sum(p.numel() for p in net.parameters())
+        psnr_opt = dict(type='calculate_psnr', crop_border=0, test_y_channel=False)
+        ssim_opt = dict(type='calculate_ssim', crop_border=0, test_y_channel=False)
 
-    rois = build_fixed_scatter_rois(dataroot_gt, split_file, roi_file) if roi_file is not None else []
-    roi_map = {item['sequence_name']: item for item in rois}
+        if roi_file is not None:
+            if rank == 0:
+                rois = build_fixed_scatter_rois(dataroot_gt, split_file, roi_file)
+            if is_dist:
+                dist.barrier()
+            if rank != 0:
+                rois = build_fixed_scatter_rois(dataroot_gt, split_file, roi_file)
+        else:
+            rois = []
+        roi_map = {item['sequence_name']: item for item in rois}
 
-    base_frame_ids = torch.arange(9, dtype=torch.long, device=device).unsqueeze(0)
-    base_q = compute_grid_quality_tensor(base_frame_ids[0], 4, 4).unsqueeze(0).to(device)
+        base_frame_ids = torch.arange(9, dtype=torch.long, device=device).unsqueeze(0)
+        base_q = compute_grid_quality_tensor(base_frame_ids[0], 4, 4).unsqueeze(0).to(device)
 
-    variants = ('raw', 'fusion')
-    frame_metrics = {v: {t: {'psnr': [], 'ssim': []} for t in range(9)} for v in variants}
-    f4_strip = {v: {k: {'psnr': [], 'ssim': []} for k in range(4)} for v in variants}
-    f4_center = {v: {'psnr': [], 'ssim': []} for v in variants}
-    ground_s = {v: {s: {'psnr': [], 'ssim': []} for s in range(12)} for v in variants}
-    h_interior = {v: {'psnr': [], 'ssim': []} for v in variants}
-    h_boundary = {v: {'psnr': [], 'ssim': []} for v in variants}
-    overlap_mads = {'raw': [], 'fusion': [], 'GT': [], 'LQ': []}
-    seq_rows = []
-    roi_stats = {v: {'peak_err': [], 'pos_shift': [], 'contrast_err': [], 'false_bright': []} for v in variants}
+        variants = ('raw', 'fusion')
+        local_indices = list(range(rank, len(names), world_size))
+        local_records = []
 
-    # 聚合 F4 16x9 注意力热图（仅当启用 token_interaction 且 save_telemetry_summary）
-    f4_attn_sum = None
-    f4_attn_cnt = 0
-    q_d_vals, q_c_vals, q_attn_recv = [], [], []
-    detail_deltas = []
+        # 本地遥测累计数（仅跨 rank 归约纯 CPU/NumPy 标量与数组）
+        f4_attn_sum = None
+        f4_attn_cnt = 0
+        q_tele_records = []
+        detail_records = []
 
-    with torch.no_grad():
-        for seq_name in names:
-            lq_u8 = np.stack([cv2.imread(str(dataroot_lq / seq_name / f'{t:03d}.png'), cv2.IMREAD_GRAYSCALE) for t in range(9)])
-            gt_u8 = np.stack([cv2.imread(str(dataroot_gt / seq_name / f'{t:03d}.png'), cv2.IMREAD_GRAYSCALE) for t in range(9)])
+        with torch.no_grad():
+            for seq_idx in local_indices:
+                seq_name = names[seq_idx]
+                lq_u8 = np.stack([cv2.imread(str(dataroot_lq / seq_name / f'{t:03d}.png'), cv2.IMREAD_GRAYSCALE) for t in range(9)])
+                gt_u8 = np.stack([cv2.imread(str(dataroot_gt / seq_name / f'{t:03d}.png'), cv2.IMREAD_GRAYSCALE) for t in range(9)])
 
-            lq_t = torch.stack(
-                [img2tensor(np.ascontiguousarray(lq_u8[t, :, :, None]), bgr2rgb=False).div_(255.0) for t in range(9)], dim=0
-            ).unsqueeze(0).to(device)
+                lq_t = torch.stack(
+                    [img2tensor(np.ascontiguousarray(lq_u8[t, :, :, None]), bgr2rgb=False).div_(255.0) for t in range(9)], dim=0
+                ).unsqueeze(0).to(device)
 
-            need_tele = save_telemetry_summary and (slice_height is None)
-            pred_float, tele = infer_sequence_float(
-                net,
-                lq_t,
-                base_frame_ids,
-                base_q,
-                slice_height=slice_height,
-                slice_stride=slice_stride,
-                masked_source_frames=masked_source_frames,
-                return_telemetry=need_tele,
-            )
-            fused_float = overlap_fuse_float(pred_float)
+                need_tele = save_telemetry_summary and (slice_height is None)
+                pred_float, tele = infer_sequence_float(
+                    net,
+                    lq_t,
+                    base_frame_ids,
+                    base_q,
+                    slice_height=slice_height,
+                    slice_stride=slice_stride,
+                    masked_source_frames=masked_source_frames,
+                    return_telemetry=need_tele,
+                )
+                fused_float = overlap_fuse_float(pred_float)
 
-            raw_u8 = np.stack([float_to_uint8(pred_float[t]) for t in range(9)])
-            fus_u8 = np.stack([float_to_uint8(fused_float[t]) for t in range(9)])
+                raw_u8 = np.stack([float_to_uint8(pred_float[t]) for t in range(9)])
+                fus_u8 = np.stack([float_to_uint8(fused_float[t]) for t in range(9)])
 
-            if save_img:
-                for t in range(9):
-                    imwrite_path = out_dir / 'restored' / seq_name / f'{t:03d}.png'
-                    imwrite_path.parent.mkdir(parents=True, exist_ok=True)
-                    cv2.imwrite(str(imwrite_path), raw_u8[t])
+                if save_img:
+                    for t in range(9):
+                        imwrite_path = out_dir / 'restored' / seq_name / f'{t:03d}.png'
+                        imwrite_path.parent.mkdir(parents=True, exist_ok=True)
+                        cv2.imwrite(str(imwrite_path), raw_u8[t])
 
-            overlap_mads['raw'].append(overlap_consistency_mad(raw_u8))
-            overlap_mads['fusion'].append(overlap_consistency_mad(fus_u8))
-            overlap_mads['GT'].append(overlap_consistency_mad(gt_u8))
-            overlap_mads['LQ'].append(overlap_consistency_mad(lq_u8))
+                seq_mads = {
+                    'raw': overlap_consistency_mad(raw_u8),
+                    'fusion': overlap_consistency_mad(fus_u8),
+                    'GT': overlap_consistency_mad(gt_u8),
+                    'LQ': overlap_consistency_mad(lq_u8),
+                }
 
-            pred_dict = {'raw': raw_u8, 'fusion': fus_u8}
-            seq_row = {'sequence_name': seq_name, 'scene': seq_name.split('_rstart_')[0]}
-            for v, imgs in pred_dict.items():
-                p_list, s_list = [], []
-                for t in range(9):
-                    p = float(calculate_metric(dict(img=imgs[t], img2=gt_u8[t]), psnr_opt))
-                    s = float(calculate_metric(dict(img=imgs[t], img2=gt_u8[t]), ssim_opt))
-                    frame_metrics[v][t]['psnr'].append(p)
-                    frame_metrics[v][t]['ssim'].append(s)
-                    p_list.append(p)
-                    s_list.append(s)
+                pred_dict = {'raw': raw_u8, 'fusion': fus_u8}
+                seq_row = {'sequence_name': seq_name, 'scene': seq_name.split('_rstart_')[0]}
+                seq_metrics_per_v = {}
+                for v, imgs in pred_dict.items():
+                    p_list, s_list = [], []
+                    ground_entries = []
+                    for t in range(9):
+                        p = float(calculate_metric(dict(img=imgs[t], img2=gt_u8[t]), psnr_opt))
+                        s = float(calculate_metric(dict(img=imgs[t], img2=gt_u8[t]), ssim_opt))
+                        p_list.append(p)
+                        s_list.append(s)
+                        for k in range(4):
+                            gs = t + k
+                            gp, gss = region_psnr_ssim(imgs[t], gt_u8[t], k * 128, (k + 1) * 128)
+                            ground_entries.append((gs, gp, gss))
+                    f4_strips_p, f4_strips_s = [], []
                     for k in range(4):
-                        gs = t + k
-                        gp, gss = region_psnr_ssim(imgs[t], gt_u8[t], k * 128, (k + 1) * 128)
-                        ground_s[v][gs]['psnr'].append(gp)
-                        ground_s[v][gs]['ssim'].append(gss)
-                        if gs in (0, 1, 2, 9, 10, 11):
-                            h_interior[v]['psnr'].append(gp)
-                            h_interior[v]['ssim'].append(gss)
-                        elif gs in (3, 8):
-                            h_boundary[v]['psnr'].append(gp)
-                            h_boundary[v]['ssim'].append(gss)
+                        fp, fss = region_psnr_ssim(imgs[4], gt_u8[4], k * 128, (k + 1) * 128)
+                        f4_strips_p.append(fp)
+                        f4_strips_s.append(fss)
+                    cp, cs = region_psnr_ssim(imgs[4], gt_u8[4], 128, 384)
+                    seq_row[f'{v}_psnr_mean'] = float(np.mean(p_list))
+                    seq_row[f'{v}_ssim_mean'] = float(np.mean(s_list))
+                    seq_row[f'{v}_f4_psnr'] = p_list[4]
+                    seq_row[f'{v}_f4_center_psnr'] = cp
+
+                    roi_tuple = None
+                    if seq_name in roi_map:
+                        rc = roi_map[seq_name]
+                        roi_tuple = compute_scatter_roi_metrics(imgs[4], gt_u8[4], rc['centers'], rc['half_win'])
+
+                    seq_metrics_per_v[v] = {
+                        'p_list': p_list,
+                        's_list': s_list,
+                        'ground_entries': ground_entries,
+                        'f4_strips_p': f4_strips_p,
+                        'f4_strips_s': f4_strips_s,
+                        'f4_center': (cp, cs),
+                        'roi_tuple': roi_tuple,
+                    }
+
+                local_records.append((seq_idx, {
+                    'seq_row': seq_row,
+                    'seq_mads': seq_mads,
+                    'per_v': seq_metrics_per_v,
+                }))
+
+                if need_tele and tele and 'attn_layers' in tele and tele['attn_layers']:
+                    # 取最后一层 F4 (token 64..79) 对 9 帧 (0..8) 汇总成 16x9
+                    last_attn = tele['attn_layers'][-1][0].mean(dim=0).cpu().numpy()  # [N, N]
+                    if last_attn.shape[0] == 144:
+                        f4_to_all = last_attn[64:80, :].reshape(16, 9, 16).sum(axis=-1)  # [16, 9]
+                        if f4_attn_sum is None:
+                            f4_attn_sum = np.zeros_like(f4_to_all, dtype=np.float64)
+                        f4_attn_sum += f4_to_all
+                        f4_attn_cnt += 1
+                    if tele.get('quality_layers'):
+                        ql = tele['quality_layers'][-1]
+                        d_arr = ql['d_tgt'][0].mean(dim=-1).cpu().numpy()
+                        c_arr = ql['c_src'][0].mean(dim=-1).cpu().numpy()
+                        # 每个来源 j 被跨帧读取的平均权重
+                        cross_mask = np.ones((144, 144), dtype=bool)
+                        for ft in range(9):
+                            cross_mask[ft * 16:(ft + 1) * 16, ft * 16:(ft + 1) * 16] = False
+                        recv_col = (last_attn * cross_mask).sum(axis=0)
+                        q_tele_records.append((seq_idx, d_arr, c_arr, recv_col))
+                    if tele.get('detail_info'):
+                        detail_records.append((seq_idx, float(tele['detail_info']['detail_delta_abs_mean'])))
+
+        local_payload = {
+            'records': local_records,
+            'f4_attn_sum': f4_attn_sum,
+            'f4_attn_cnt': f4_attn_cnt,
+            'q_tele_records': q_tele_records,
+            'detail_records': detail_records,
+        }
+        if is_dist:
+            gathered = [None] * world_size
+            dist.all_gather_object(gathered, local_payload)
+        else:
+            gathered = [local_payload]
+
+        # GPU 时延与峰值显存测量（仅 rank 0 在隔离状态下执行）
+        if is_dist:
+            dist.barrier()
+        latency_info = {}
+        if rank == 0 and benchmark_latency and device.type == 'cuda':
+            dummy = torch.rand(1, 9, 1, 512, 512, device=device)
+            torch.cuda.empty_cache()
+            torch.cuda.reset_peak_memory_stats(device)
+            with torch.no_grad():
+                for _ in range(5):
+                    _ = infer_sequence_float(net, dummy, base_frame_ids, base_q, slice_height=slice_height, slice_stride=slice_stride)
+            torch.cuda.synchronize()
+            net_times = []
+            e2e_times = []
+            with torch.no_grad():
+                for _ in range(20):
+                    torch.cuda.synchronize()
+                    t0 = time.perf_counter()
+                    pred_f, _ = infer_sequence_float(net, dummy, base_frame_ids, base_q, slice_height=slice_height, slice_stride=slice_stride)
+                    torch.cuda.synchronize()
+                    t1 = time.perf_counter()
+                    _ = overlap_fuse_float(pred_f)
+                    t2 = time.perf_counter()
+                    net_times.append((t1 - t0) * 1000.0)
+                    e2e_times.append((t2 - t0) * 1000.0)
+            latency_info = {
+                'net_p50_ms': float(np.percentile(net_times, 50)),
+                'net_p95_ms': float(np.percentile(net_times, 95)),
+                'fusion_e2e_p50_ms': float(np.percentile(e2e_times, 50)),
+                'fusion_e2e_p95_ms': float(np.percentile(e2e_times, 95)),
+                'peak_allocated_gib': float(torch.cuda.max_memory_allocated(device) / (1024 ** 3)),
+                'peak_reserved_gib': float(torch.cuda.max_memory_reserved(device) / (1024 ** 3)),
+            }
+        if is_dist:
+            dist.barrier()
+
+        if rank != 0:
+            return {}
+
+        all_records = []
+        merged_attn_sum = None
+        merged_attn_cnt = 0
+        merged_q_tele = []
+        merged_details = []
+        for payload in gathered:
+            all_records.extend(payload['records'])
+            if payload['f4_attn_sum'] is not None:
+                if merged_attn_sum is None:
+                    merged_attn_sum = np.zeros_like(payload['f4_attn_sum'], dtype=np.float64)
+                merged_attn_sum += payload['f4_attn_sum']
+                merged_attn_cnt += payload['f4_attn_cnt']
+            merged_q_tele.extend(payload['q_tele_records'])
+            merged_details.extend(payload['detail_records'])
+
+        all_records.sort(key=lambda item: item[0])
+        merged_q_tele.sort(key=lambda item: item[0])
+        merged_details.sort(key=lambda item: item[0])
+
+        frame_metrics = {v: {t: {'psnr': [], 'ssim': []} for t in range(9)} for v in variants}
+        f4_strip = {v: {k: {'psnr': [], 'ssim': []} for k in range(4)} for v in variants}
+        f4_center = {v: {'psnr': [], 'ssim': []} for v in variants}
+        ground_s = {v: {s: {'psnr': [], 'ssim': []} for s in range(12)} for v in variants}
+        h_interior = {v: {'psnr': [], 'ssim': []} for v in variants}
+        h_boundary = {v: {'psnr': [], 'ssim': []} for v in variants}
+        overlap_mads = {'raw': [], 'fusion': [], 'GT': [], 'LQ': []}
+        seq_rows = []
+        roi_stats = {v: {'peak_err': [], 'pos_shift': [], 'contrast_err': [], 'false_bright': []} for v in variants}
+
+        for _, rec in all_records:
+            seq_rows.append(rec['seq_row'])
+            for mk, mv in rec['seq_mads'].items():
+                overlap_mads[mk].append(mv)
+            for v in variants:
+                vm = rec['per_v'][v]
+                for t in range(9):
+                    frame_metrics[v][t]['psnr'].append(vm['p_list'][t])
+                    frame_metrics[v][t]['ssim'].append(vm['s_list'][t])
+                for gs, gp, gss in vm['ground_entries']:
+                    ground_s[v][gs]['psnr'].append(gp)
+                    ground_s[v][gs]['ssim'].append(gss)
+                    if gs in (0, 1, 2, 9, 10, 11):
+                        h_interior[v]['psnr'].append(gp)
+                        h_interior[v]['ssim'].append(gss)
+                    elif gs in (3, 8):
+                        h_boundary[v]['psnr'].append(gp)
+                        h_boundary[v]['ssim'].append(gss)
                 for k in range(4):
-                    fp, fss = region_psnr_ssim(imgs[4], gt_u8[4], k * 128, (k + 1) * 128)
-                    f4_strip[v][k]['psnr'].append(fp)
-                    f4_strip[v][k]['ssim'].append(fss)
-                cp, cs = region_psnr_ssim(imgs[4], gt_u8[4], 128, 384)
+                    f4_strip[v][k]['psnr'].append(vm['f4_strips_p'][k])
+                    f4_strip[v][k]['ssim'].append(vm['f4_strips_s'][k])
+                cp, cs = vm['f4_center']
                 f4_center[v]['psnr'].append(cp)
                 f4_center[v]['ssim'].append(cs)
-                seq_row[f'{v}_psnr_mean'] = float(np.mean(p_list))
-                seq_row[f'{v}_ssim_mean'] = float(np.mean(s_list))
-                seq_row[f'{v}_f4_psnr'] = p_list[4]
-                seq_row[f'{v}_f4_center_psnr'] = cp
-
-                if seq_name in roi_map:
-                    rc = roi_map[seq_name]
-                    pe, ps_, ce, fb = compute_scatter_roi_metrics(imgs[4], gt_u8[4], rc['centers'], rc['half_win'])
+                if vm['roi_tuple'] is not None:
+                    pe, ps_, ce, fb = vm['roi_tuple']
                     roi_stats[v]['peak_err'].extend(pe)
                     roi_stats[v]['pos_shift'].extend(ps_)
                     roi_stats[v]['contrast_err'].extend(ce)
                     roi_stats[v]['false_bright'].extend(fb)
-            seq_rows.append(seq_row)
 
-            if need_tele and tele and 'attn_layers' in tele and tele['attn_layers']:
-                # 取最后一层 F4 (token 64..79) 对 9 帧 (0..8) 汇总成 16x9
-                last_attn = tele['attn_layers'][-1][0].mean(dim=0).cpu().numpy()  # [N, N]
-                if last_attn.shape[0] == 144:
-                    f4_to_all = last_attn[64:80, :].reshape(16, 9, 16).sum(axis=-1)  # [16, 9]
-                    if f4_attn_sum is None:
-                        f4_attn_sum = np.zeros_like(f4_to_all, dtype=np.float64)
-                    f4_attn_sum += f4_to_all
-                    f4_attn_cnt += 1
-                if tele.get('quality_layers'):
-                    ql = tele['quality_layers'][-1]
-                    q_d_vals.append(ql['d_tgt'][0].mean(dim=-1).cpu().numpy())
-                    q_c_vals.append(ql['c_src'][0].mean(dim=-1).cpu().numpy())
-                    # 每个来源 j 被跨帧读取的平均权重
-                    cross_mask = np.ones((144, 144), dtype=bool)
-                    for ft in range(9):
-                        cross_mask[ft * 16:(ft + 1) * 16, ft * 16:(ft + 1) * 16] = False
-                    recv_col = (last_attn * cross_mask).sum(axis=0)
-                    q_attn_recv.append(recv_col)
-                if tele.get('detail_info'):
-                    detail_deltas.append(tele['detail_info']['detail_delta_abs_mean'])
+        # 写出 per-sequence CSV（用于按序列配对差值与 95% CI）
+        with (out_dir / 'metrics_per_sequence.csv').open('w', encoding='utf-8', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=list(seq_rows[0].keys()))
+            writer.writeheader()
+            writer.writerows(seq_rows)
 
-    # GPU 时延与峰值显存测量（第 14.4 节）
-    latency_info = {}
-    if benchmark_latency and device.type == 'cuda':
-        dummy = torch.rand(1, 9, 1, 512, 512, device=device)
-        torch.cuda.empty_cache()
-        torch.cuda.reset_peak_memory_stats(device)
-        with torch.no_grad():
-            for _ in range(5):
-                _ = infer_sequence_float(net, dummy, base_frame_ids, base_q, slice_height=slice_height, slice_stride=slice_stride)
-        torch.cuda.synchronize()
-        net_times = []
-        e2e_times = []
-        with torch.no_grad():
-            for _ in range(20):
-                torch.cuda.synchronize()
-                t0 = time.perf_counter()
-                pred_f, _ = infer_sequence_float(net, dummy, base_frame_ids, base_q, slice_height=slice_height, slice_stride=slice_stride)
-                torch.cuda.synchronize()
-                t1 = time.perf_counter()
-                _ = overlap_fuse_float(pred_f)
-                t2 = time.perf_counter()
-                net_times.append((t1 - t0) * 1000.0)
-                e2e_times.append((t2 - t0) * 1000.0)
-        latency_info = {
-            'net_p50_ms': float(np.percentile(net_times, 50)),
-            'net_p95_ms': float(np.percentile(net_times, 95)),
-            'fusion_e2e_p50_ms': float(np.percentile(e2e_times, 50)),
-            'fusion_e2e_p95_ms': float(np.percentile(e2e_times, 95)),
-            'peak_allocated_gib': float(torch.cuda.max_memory_allocated(device) / (1024 ** 3)),
-            'peak_reserved_gib': float(torch.cuda.max_memory_reserved(device) / (1024 ** 3)),
+        # 写出 F0-F8 CSV
+        fpos_rows = []
+        for t in range(9):
+            row = {'frame_idx': t, 'count': len(names)}
+            for v in variants:
+                row[f'{v}_psnr_mean'] = float(np.mean(frame_metrics[v][t]['psnr']))
+                row[f'{v}_psnr_std'] = float(np.std(frame_metrics[v][t]['psnr'], ddof=0))
+                row[f'{v}_ssim_mean'] = float(np.mean(frame_metrics[v][t]['ssim']))
+                row[f'{v}_ssim_std'] = float(np.std(frame_metrics[v][t]['ssim'], ddof=0))
+            fpos_rows.append(row)
+        with (out_dir / 'frame_position_summary.csv').open('w', encoding='utf-8', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=list(fpos_rows[0].keys()))
+            writer.writeheader()
+            writer.writerows(fpos_rows)
+
+        summary = {
+            'opt': str(opt_path),
+            'checkpoint': str(ckpt_path),
+            'split_file': str(split_file),
+            'num_sequences': len(names),
+            'num_frames': len(names) * 9,
+            'total_params': total_params,
+            'slice_height': slice_height,
+            'slice_stride': slice_stride,
+            'masked_source_frames': masked_source_frames,
+            'variants': {},
+            'overlap_consistency_mad': {k: float(np.mean(v)) for k, v in overlap_mads.items()},
+            'latency_memory': latency_info,
         }
-
-    # 写出 per-sequence CSV（用于按序列配对差值与 95% CI）
-    with (out_dir / 'metrics_per_sequence.csv').open('w', encoding='utf-8', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=list(seq_rows[0].keys()))
-        writer.writeheader()
-        writer.writerows(seq_rows)
-
-    # 写出 F0-F8 CSV
-    fpos_rows = []
-    for t in range(9):
-        row = {'frame_idx': t, 'count': len(names)}
         for v in variants:
-            row[f'{v}_psnr_mean'] = float(np.mean(frame_metrics[v][t]['psnr']))
-            row[f'{v}_psnr_std'] = float(np.std(frame_metrics[v][t]['psnr'], ddof=0))
-            row[f'{v}_ssim_mean'] = float(np.mean(frame_metrics[v][t]['ssim']))
-            row[f'{v}_ssim_std'] = float(np.std(frame_metrics[v][t]['ssim'], ddof=0))
-        fpos_rows.append(row)
-    with (out_dir / 'frame_position_summary.csv').open('w', encoding='utf-8', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=list(fpos_rows[0].keys()))
-        writer.writeheader()
-        writer.writerows(fpos_rows)
+            summary['variants'][v] = {
+                'nine_frame_psnr': float(np.mean([x for t in range(9) for x in frame_metrics[v][t]['psnr']])),
+                'nine_frame_ssim': float(np.mean([x for t in range(9) for x in frame_metrics[v][t]['ssim']])),
+                'f4_psnr': float(np.mean(frame_metrics[v][4]['psnr'])),
+                'f4_ssim': float(np.mean(frame_metrics[v][4]['ssim'])),
+                'f4_center_psnr': float(np.mean(f4_center[v]['psnr'])),
+                'f4_center_ssim': float(np.mean(f4_center[v]['ssim'])),
+                'f4_strips_psnr': {f'k{k}': float(np.mean(f4_strip[v][k]['psnr'])) for k in range(4)},
+                'f4_strips_ssim': {f'k{k}': float(np.mean(f4_strip[v][k]['ssim'])) for k in range(4)},
+                'ground_s4_7_psnr': float(np.mean([x for s in range(4, 8) for x in ground_s[v][s]['psnr']])),
+                'ground_s4_7_ssim': float(np.mean([x for s in range(4, 8) for x in ground_s[v][s]['ssim']])),
+                'ground_strips_psnr': {f's{s}': float(np.mean(ground_s[v][s]['psnr'])) for s in range(12)},
+                'h_interior_psnr': float(np.mean(h_interior[v]['psnr'])),
+                'h_interior_ssim': float(np.mean(h_interior[v]['ssim'])),
+                'h_boundary_psnr': float(np.mean(h_boundary[v]['psnr'])),
+                'h_boundary_ssim': float(np.mean(h_boundary[v]['ssim'])),
+                'f0_f8_psnr': [float(np.mean(frame_metrics[v][t]['psnr'])) for t in range(9)],
+                'f0_f8_ssim': [float(np.mean(frame_metrics[v][t]['ssim'])) for t in range(9)],
+                'scatter_roi': {
+                    k: float(np.mean(vals)) if vals else None for k, vals in roi_stats[v].items()
+                },
+            }
 
-    summary = {
-        'opt': str(opt_path),
-        'checkpoint': str(ckpt_path),
-        'split_file': str(split_file),
-        'num_sequences': len(names),
-        'num_frames': len(names) * 9,
-        'total_params': total_params,
-        'slice_height': slice_height,
-        'slice_stride': slice_stride,
-        'masked_source_frames': masked_source_frames,
-        'variants': {},
-        'overlap_consistency_mad': {k: float(np.mean(v)) for k, v in overlap_mads.items()},
-        'latency_memory': latency_info,
-    }
-    for v in variants:
-        summary['variants'][v] = {
-            'nine_frame_psnr': float(np.mean([x for t in range(9) for x in frame_metrics[v][t]['psnr']])),
-            'nine_frame_ssim': float(np.mean([x for t in range(9) for x in frame_metrics[v][t]['ssim']])),
-            'f4_psnr': float(np.mean(frame_metrics[v][4]['psnr'])),
-            'f4_ssim': float(np.mean(frame_metrics[v][4]['ssim'])),
-            'f4_center_psnr': float(np.mean(f4_center[v]['psnr'])),
-            'f4_center_ssim': float(np.mean(f4_center[v]['ssim'])),
-            'f4_strips_psnr': {f'k{k}': float(np.mean(f4_strip[v][k]['psnr'])) for k in range(4)},
-            'f4_strips_ssim': {f'k{k}': float(np.mean(f4_strip[v][k]['ssim'])) for k in range(4)},
-            'ground_s4_7_psnr': float(np.mean([x for s in range(4, 8) for x in ground_s[v][s]['psnr']])),
-            'ground_s4_7_ssim': float(np.mean([x for s in range(4, 8) for x in ground_s[v][s]['ssim']])),
-            'ground_strips_psnr': {f's{s}': float(np.mean(ground_s[v][s]['psnr'])) for s in range(12)},
-            'h_interior_psnr': float(np.mean(h_interior[v]['psnr'])),
-            'h_interior_ssim': float(np.mean(h_interior[v]['ssim'])),
-            'h_boundary_psnr': float(np.mean(h_boundary[v]['psnr'])),
-            'h_boundary_ssim': float(np.mean(h_boundary[v]['ssim'])),
-            'f0_f8_psnr': [float(np.mean(frame_metrics[v][t]['psnr'])) for t in range(9)],
-            'f0_f8_ssim': [float(np.mean(frame_metrics[v][t]['ssim'])) for t in range(9)],
-            'scatter_roi': {
-                k: float(np.mean(vals)) if vals else None for k, vals in roi_stats[v].items()
-            },
-        }
+        if merged_attn_sum is not None and merged_attn_cnt > 0:
+            np.save(out_dir / 'f4_attn_16x9.npy', merged_attn_sum / merged_attn_cnt)
+        if merged_q_tele:
+            np.savez(
+                out_dir / 'quality_telemetry.npz',
+                d_mean=np.mean([item[1] for item in merged_q_tele], axis=0),
+                c_mean=np.mean([item[2] for item in merged_q_tele], axis=0),
+                cross_recv_mean=np.mean([item[3] for item in merged_q_tele], axis=0),
+            )
+        if merged_details:
+            summary['detail_delta_abs_mean'] = float(np.mean([item[1] for item in merged_details]))
 
-    if f4_attn_sum is not None and f4_attn_cnt > 0:
-        np.save(out_dir / 'f4_attn_16x9.npy', f4_attn_sum / f4_attn_cnt)
-    if q_d_vals:
-        np.savez(
-            out_dir / 'quality_telemetry.npz',
-            d_mean=np.mean(q_d_vals, axis=0),
-            c_mean=np.mean(q_c_vals, axis=0),
-            cross_recv_mean=np.mean(q_attn_recv, axis=0),
-        )
-    if detail_deltas:
-        summary['detail_delta_abs_mean'] = float(np.mean(detail_deltas))
-
-    (out_dir / 'summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding='utf-8')
-    return summary
+        (out_dir / 'summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding='utf-8')
+        return summary
+    finally:
+        if created_pg and dist.is_initialized():
+            dist.destroy_process_group()
 
 
 def main():
@@ -472,7 +604,8 @@ def main():
         benchmark_latency=not args.no_bench,
         save_img=args.save_img,
     )
-    print(json.dumps(res, ensure_ascii=False, indent=2))
+    if res:
+        print(json.dumps(res, ensure_ascii=False, indent=2))
 
 
 if __name__ == '__main__':

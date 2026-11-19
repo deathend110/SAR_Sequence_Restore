@@ -147,3 +147,7 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# UCAN_exp1 实验报告指标表与结果图纳入版本控制
+!docs/UCAN_exp1/**/*.csv
+!docs/UCAN_exp1/**/*.png

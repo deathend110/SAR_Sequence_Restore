@@ -16,10 +16,29 @@ from basicsr.utils import get_root_logger, imwrite, tensor2img
 class DistributedValidationMixin:
 
     def dist_validation(self, dataloader, current_iter, tb_logger, save_img):
+        train_opt = self.opt.get('train')
+        val_opt = self.opt.get('val')
+        rank, world_size = dist.get_rank(), dist.get_world_size()
+        logger = get_root_logger()
+        # BasicSR train.py 会在 total_iter 验证并保存 latest 后再次以 total_iter + 1 触发验证；
+        # 若刚在 total_iter 完成验证且无需保存图像，则直接跳过重复推理。
+        if (
+            self.opt.get('is_train')
+            and not save_img
+            and train_opt is not None
+            and val_opt is not None
+            and train_opt.get('total_iter') is not None
+            and val_opt.get('val_freq')
+            and int(current_iter) == int(train_opt['total_iter']) + 1
+            and int(train_opt['total_iter']) % int(val_opt['val_freq']) == 0
+        ):
+            if rank == 0:
+                logger.info(f'Skip duplicate end-of-training validation at iter {current_iter}.')
+            return
+
         dataset = dataloader.dataset
         dataset_name = dataset.opt['name']
-        rank, world_size = dist.get_rank(), dist.get_world_size()
-        metric_opts = self.opt['val'].get('metrics')
+        metric_opts = val_opt.get('metrics') if val_opt is not None else None
         metric_names = list(metric_opts) if metric_opts is not None else []
         # 不使用会补齐样本的 DistributedSampler，保证每张图只统计一次。
         local_loader = DataLoader(
@@ -28,7 +47,6 @@ class DistributedValidationMixin:
         metric_sums = [0.0] * len(metric_names)
         count = 0
         start = time.perf_counter()
-        logger = get_root_logger()
         if rank == 0:
             logger.info(f'Start distributed validation {dataset_name}: {len(dataset)} images, {world_size} ranks.')
         use_pbar = self.opt['val'].get('pbar', False) and rank == 0
@@ -47,7 +65,6 @@ class DistributedValidationMixin:
                 del self.gt
             del self.lq
             del self.output
-            torch.cuda.empty_cache()
 
             if save_img:
                 if self.opt['is_train']:
@@ -65,6 +82,8 @@ class DistributedValidationMixin:
                 pbar.update(1)
         if use_pbar:
             pbar.close()
+        if self.device.type == 'cuda':
+            torch.cuda.empty_cache()
 
         # 连同实际样本数一次归约；空分片也参与，无指标时仍协调验证结束。
         totals = torch.tensor(metric_sums + [count], dtype=torch.float64, device=self.device)
