@@ -301,6 +301,13 @@ def evaluate_sequence_model(
         detail_beta_sum = None
         detail_counts_sum = None
         detail_cnt = 0
+        scalar_tele = {
+            'delta_z_rms': [],
+            'wb_b_rms': [],
+            'tanh_abs_max': [],
+            'tanh_sat_gt095_ratio': [],
+        }
+        q_layer_moments = {}  # layer_idx -> [cnt, d_sum, d_sq, c_sum, c_sq]
         permute_equiv_max_diff = None
 
         with torch.no_grad():
@@ -408,25 +415,39 @@ def evaluate_sequence_model(
                     'per_v': seq_metrics_per_v,
                 }))
 
-                if need_tele and tele and 'attn_layers' in tele and tele['attn_layers']:
-                    # 取最后一层 F4 (token 64..79) 对 9 帧 (0..8) 汇总成 16x9
-                    last_attn = tele['attn_layers'][-1][0].mean(dim=0).cpu().numpy()  # [N, N]
-                    if last_attn.shape[0] == 144:
-                        f4_to_all = last_attn[64:80, :].reshape(16, 9, 16).sum(axis=-1)  # [16, 9]
-                        if f4_attn_sum is None:
-                            f4_attn_sum = np.zeros_like(f4_to_all, dtype=np.float64)
-                        f4_attn_sum += f4_to_all
-                        f4_attn_cnt += 1
-                    if tele.get('quality_layers'):
-                        ql = tele['quality_layers'][-1]
-                        d_arr = ql['d_tgt'][0].mean(dim=-1).cpu().numpy()
-                        c_arr = ql['c_src'][0].mean(dim=-1).cpu().numpy()
-                        # 每个来源 j 被跨帧读取的平均权重
-                        cross_mask = np.ones((144, 144), dtype=bool)
-                        for ft in range(9):
-                            cross_mask[ft * 16:(ft + 1) * 16, ft * 16:(ft + 1) * 16] = False
-                        recv_col = (last_attn * cross_mask).sum(axis=0)
-                        q_tele_records.append((seq_idx, d_arr, c_arr, recv_col))
+                if need_tele and tele:
+                    for skey in scalar_tele:
+                        if skey in tele:
+                            scalar_tele[skey].append(float(tele[skey]))
+                    for l_idx, ql_item in enumerate(tele.get('quality_layers') or []):
+                        d_flat = ql_item['d_tgt'].detach().to(torch.float64).cpu().numpy().ravel()
+                        c_flat = ql_item['c_src'].detach().to(torch.float64).cpu().numpy().ravel()
+                        acc_m = q_layer_moments.setdefault(l_idx, [0, 0.0, 0.0, 0.0, 0.0])
+                        acc_m[0] += int(d_flat.size)
+                        acc_m[1] += float(d_flat.sum())
+                        acc_m[2] += float(np.square(d_flat).sum())
+                        acc_m[3] += float(c_flat.sum())
+                        acc_m[4] += float(np.square(c_flat).sum())
+
+                    if 'attn_layers' in tele and tele['attn_layers']:
+                        # 取最后一层 F4 (token 64..79) 对 9 帧 (0..8) 汇总成 16x9
+                        last_attn = tele['attn_layers'][-1][0].mean(dim=0).cpu().numpy()  # [N, N]
+                        if last_attn.shape[0] == 144:
+                            f4_to_all = last_attn[64:80, :].reshape(16, 9, 16).sum(axis=-1)  # [16, 9]
+                            if f4_attn_sum is None:
+                                f4_attn_sum = np.zeros_like(f4_to_all, dtype=np.float64)
+                            f4_attn_sum += f4_to_all
+                            f4_attn_cnt += 1
+                        if tele.get('quality_layers'):
+                            ql = tele['quality_layers'][-1]
+                            d_arr = ql['d_tgt'][0].mean(dim=-1).cpu().numpy()
+                            c_arr = ql['c_src'][0].mean(dim=-1).cpu().numpy()
+                            # 每个来源 j 被跨帧读取的平均权重
+                            cross_mask = np.ones((144, 144), dtype=bool)
+                            for ft in range(9):
+                                cross_mask[ft * 16:(ft + 1) * 16, ft * 16:(ft + 1) * 16] = False
+                            recv_col = (last_attn * cross_mask).sum(axis=0)
+                            q_tele_records.append((seq_idx, d_arr, c_arr, recv_col))
                     if tele.get('detail_info'):
                         di = tele['detail_info']
                         detail_records.append((seq_idx, float(di['detail_delta_abs_mean'])))
@@ -448,6 +469,8 @@ def evaluate_sequence_model(
             'detail_beta_sum': detail_beta_sum,
             'detail_counts_sum': detail_counts_sum,
             'detail_cnt': detail_cnt,
+            'scalar_tele': scalar_tele,
+            'q_layer_moments': q_layer_moments,
             'permute_equiv_max_diff': permute_equiv_max_diff,
         }
         if is_dist:
@@ -504,6 +527,8 @@ def evaluate_sequence_model(
         merged_detail_counts_sum = None
         merged_detail_cnt = 0
         merged_perm_diff = None
+        merged_scalar_tele = {k: [] for k in scalar_tele}
+        merged_q_moments = {}
         for payload in gathered:
             all_records.extend(payload['records'])
             if payload['f4_attn_sum'] is not None:
@@ -513,6 +538,12 @@ def evaluate_sequence_model(
                 merged_attn_cnt += payload['f4_attn_cnt']
             merged_q_tele.extend(payload['q_tele_records'])
             merged_details.extend(payload['detail_records'])
+            for skey, svals in payload['scalar_tele'].items():
+                merged_scalar_tele[skey].extend(svals)
+            for l_idx, mvals in payload['q_layer_moments'].items():
+                dst = merged_q_moments.setdefault(l_idx, [0, 0.0, 0.0, 0.0, 0.0])
+                for mi in range(5):
+                    dst[mi] += mvals[mi]
             if payload['detail_beta_sum'] is not None:
                 if merged_detail_beta_sum is None:
                     merged_detail_beta_sum = np.zeros_like(payload['detail_beta_sum'], dtype=np.float64)
@@ -631,6 +662,37 @@ def evaluate_sequence_model(
                     k: float(np.mean(vals)) if vals else None for k, vals in roi_stats[v].items()
                 },
             }
+
+        if any(merged_scalar_tele.values()) or merged_q_moments:
+            telemetry_stats = {}
+            if merged_scalar_tele['delta_z_rms']:
+                telemetry_stats['delta_z_rms_mean'] = float(np.mean(merged_scalar_tele['delta_z_rms']))
+                telemetry_stats['delta_z_rms_std'] = float(np.std(merged_scalar_tele['delta_z_rms'], ddof=0))
+            if merged_scalar_tele['wb_b_rms']:
+                telemetry_stats['wb_b_rms_mean'] = float(np.mean(merged_scalar_tele['wb_b_rms']))
+                telemetry_stats['wb_b_rms_std'] = float(np.std(merged_scalar_tele['wb_b_rms'], ddof=0))
+            if merged_scalar_tele['tanh_abs_max']:
+                telemetry_stats['tanh_abs_max_max'] = float(np.max(merged_scalar_tele['tanh_abs_max']))
+                telemetry_stats['tanh_abs_max_mean'] = float(np.mean(merged_scalar_tele['tanh_abs_max']))
+            if merged_scalar_tele['tanh_sat_gt095_ratio']:
+                telemetry_stats['tanh_sat_gt095_ratio_mean'] = float(np.mean(merged_scalar_tele['tanh_sat_gt095_ratio']))
+            if merged_q_moments:
+                ql_stats = []
+                for l_idx in sorted(merged_q_moments):
+                    cnt, d_s, d_sq, c_s, c_sq = merged_q_moments[l_idx]
+                    d_mu = d_s / cnt
+                    c_mu = c_s / cnt
+                    d_sd = float(np.sqrt(max(0.0, d_sq / cnt - d_mu * d_mu)))
+                    c_sd = float(np.sqrt(max(0.0, c_sq / cnt - c_mu * c_mu)))
+                    ql_stats.append({
+                        'layer': int(l_idx),
+                        'd_tgt_mean': float(d_mu),
+                        'd_tgt_std': d_sd,
+                        'c_src_mean': float(c_mu),
+                        'c_src_std': c_sd,
+                    })
+                telemetry_stats['quality_layers'] = ql_stats
+            summary['telemetry_stats'] = telemetry_stats
 
         if merged_attn_sum is not None and merged_attn_cnt > 0:
             np.save(out_dir / 'f4_attn_16x9.npy', merged_attn_sum / merged_attn_cnt)

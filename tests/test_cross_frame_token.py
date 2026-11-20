@@ -752,3 +752,13 @@ def test_20_val_iters_skip_config_gen_and_d1_additive(tmp_path):
 
     # DistributedValidationMixin 类存在且保持原有接口
     assert hasattr(DistributedValidationMixin, 'dist_validation')
+
+    # 5) 零初始化遥测标量与 quality_layers 字段验证
+    net_q = build_network(build_group_network_opt('D1', lksa_gate_gamma=4.0))
+    x_q = torch.rand(1, 9, 1, 32, 64)
+    q_in = compute_grid_quality_tensor(list(range(9)), 4, 4).unsqueeze(0)
+    _, tele = net_q(x_q, token_quality=q_in, return_telemetry=True)
+    for k in ('delta_z_rms', 'wb_b_rms', 'tanh_abs_max', 'tanh_sat_gt095_ratio'):
+        assert k in tele
+    assert len(tele['quality_layers']) == 2
+    assert 'd_tgt' in tele['quality_layers'][-1] and 'c_src' in tele['quality_layers'][-1]
