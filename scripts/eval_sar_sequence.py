@@ -230,11 +230,19 @@ def evaluate_sequence_model(
     slice_height: int | None = None,
     slice_stride: int | None = None,
     masked_source_frames: list[int] | None = None,
+    permute_frames: list[int] | None = None,
+    mismatch_meta: bool = False,
+    shuffle_quality: bool = False,
     roi_file: Path | None = None,
     save_telemetry_summary: bool = False,
     benchmark_latency: bool = True,
     save_img: bool = False,
 ):
+    if permute_frames is not None and mismatch_meta:
+        raise ValueError('--permute-frames and --mismatch-meta are mutually exclusive.')
+    if permute_frames is not None and (len(permute_frames) != 9 or sorted(permute_frames) != list(range(9))):
+        raise ValueError(f'--permute-frames must be a permutation of 0..8, got {permute_frames}')
+
     is_dist, rank, world_size, device, created_pg = _init_distributed_context()
     try:
         if rank == 0:
@@ -266,7 +274,20 @@ def evaluate_sequence_model(
         roi_map = {item['sequence_name']: item for item in rois}
 
         base_frame_ids = torch.arange(9, dtype=torch.long, device=device).unsqueeze(0)
-        base_q = compute_grid_quality_tensor(base_frame_ids[0], 4, 4).unsqueeze(0).to(device)
+        if mismatch_meta:
+            # 固定无不动点的帧身份错配（图像不动，仅元数据/质量错配）
+            meta_frame_ids = torch.tensor([[3, 7, 0, 8, 1, 6, 2, 5, 4]], dtype=torch.long, device=device)
+        else:
+            meta_frame_ids = base_frame_ids
+
+        base_q = compute_grid_quality_tensor(meta_frame_ids[0], 4, 4).unsqueeze(0).to(device)
+        if shuffle_quality:
+            rng = np.random.default_rng(2026)
+            q_perm = torch.as_tensor(rng.permutation(base_q.numel()), dtype=torch.long, device=device)
+            base_q = base_q.reshape(-1)[q_perm].reshape_as(base_q)
+
+        perm_tensor = torch.tensor(permute_frames, dtype=torch.long, device=device) if permute_frames is not None else None
+        inv_perm = np.argsort(permute_frames) if permute_frames is not None else None
 
         variants = ('raw', 'fusion')
         local_indices = list(range(rank, len(names), world_size))
@@ -277,9 +298,13 @@ def evaluate_sequence_model(
         f4_attn_cnt = 0
         q_tele_records = []
         detail_records = []
+        detail_beta_sum = None
+        detail_counts_sum = None
+        detail_cnt = 0
+        permute_equiv_max_diff = None
 
         with torch.no_grad():
-            for seq_idx in local_indices:
+            for local_i, seq_idx in enumerate(local_indices):
                 seq_name = names[seq_idx]
                 lq_u8 = np.stack([cv2.imread(str(dataroot_lq / seq_name / f'{t:03d}.png'), cv2.IMREAD_GRAYSCALE) for t in range(9)])
                 gt_u8 = np.stack([cv2.imread(str(dataroot_gt / seq_name / f'{t:03d}.png'), cv2.IMREAD_GRAYSCALE) for t in range(9)])
@@ -288,17 +313,36 @@ def evaluate_sequence_model(
                     [img2tensor(np.ascontiguousarray(lq_u8[t, :, :, None]), bgr2rgb=False).div_(255.0) for t in range(9)], dim=0
                 ).unsqueeze(0).to(device)
 
+                lq_in = lq_t[:, perm_tensor] if perm_tensor is not None else lq_t
+                fids_in = meta_frame_ids[:, perm_tensor] if perm_tensor is not None else meta_frame_ids
+                q_in = base_q[:, perm_tensor] if perm_tensor is not None else base_q
+
                 need_tele = save_telemetry_summary and (slice_height is None)
                 pred_float, tele = infer_sequence_float(
                     net,
-                    lq_t,
-                    base_frame_ids,
-                    base_q,
+                    lq_in,
+                    fids_in,
+                    q_in,
                     slice_height=slice_height,
                     slice_stride=slice_stride,
                     masked_source_frames=masked_source_frames,
                     return_telemetry=need_tele,
                 )
+                if inv_perm is not None:
+                    pred_float = pred_float[inv_perm]
+                    if local_i < 3:
+                        pred_ref, _ = infer_sequence_float(
+                            net,
+                            lq_t,
+                            meta_frame_ids,
+                            base_q,
+                            slice_height=slice_height,
+                            slice_stride=slice_stride,
+                            masked_source_frames=masked_source_frames,
+                            return_telemetry=False,
+                        )
+                        diff = float(np.max(np.abs(pred_float - pred_ref)))
+                        permute_equiv_max_diff = diff if permute_equiv_max_diff is None else max(permute_equiv_max_diff, diff)
                 fused_float = overlap_fuse_float(pred_float)
 
                 raw_u8 = np.stack([float_to_uint8(pred_float[t]) for t in range(9)])
@@ -384,7 +428,16 @@ def evaluate_sequence_model(
                         recv_col = (last_attn * cross_mask).sum(axis=0)
                         q_tele_records.append((seq_idx, d_arr, c_arr, recv_col))
                     if tele.get('detail_info'):
-                        detail_records.append((seq_idx, float(tele['detail_info']['detail_delta_abs_mean'])))
+                        di = tele['detail_info']
+                        detail_records.append((seq_idx, float(di['detail_delta_abs_mean'])))
+                        d_beta = di['detail_beta'][0].cpu().numpy().astype(np.float64)
+                        d_cnts = di['detail_valid_counts'][0].cpu().numpy().astype(np.float64)
+                        if detail_beta_sum is None:
+                            detail_beta_sum = np.zeros_like(d_beta, dtype=np.float64)
+                            detail_counts_sum = np.zeros_like(d_cnts, dtype=np.float64)
+                        detail_beta_sum += d_beta
+                        detail_counts_sum += d_cnts
+                        detail_cnt += 1
 
         local_payload = {
             'records': local_records,
@@ -392,6 +445,10 @@ def evaluate_sequence_model(
             'f4_attn_cnt': f4_attn_cnt,
             'q_tele_records': q_tele_records,
             'detail_records': detail_records,
+            'detail_beta_sum': detail_beta_sum,
+            'detail_counts_sum': detail_counts_sum,
+            'detail_cnt': detail_cnt,
+            'permute_equiv_max_diff': permute_equiv_max_diff,
         }
         if is_dist:
             gathered = [None] * world_size
@@ -443,6 +500,10 @@ def evaluate_sequence_model(
         merged_attn_cnt = 0
         merged_q_tele = []
         merged_details = []
+        merged_detail_beta_sum = None
+        merged_detail_counts_sum = None
+        merged_detail_cnt = 0
+        merged_perm_diff = None
         for payload in gathered:
             all_records.extend(payload['records'])
             if payload['f4_attn_sum'] is not None:
@@ -452,6 +513,16 @@ def evaluate_sequence_model(
                 merged_attn_cnt += payload['f4_attn_cnt']
             merged_q_tele.extend(payload['q_tele_records'])
             merged_details.extend(payload['detail_records'])
+            if payload['detail_beta_sum'] is not None:
+                if merged_detail_beta_sum is None:
+                    merged_detail_beta_sum = np.zeros_like(payload['detail_beta_sum'], dtype=np.float64)
+                    merged_detail_counts_sum = np.zeros_like(payload['detail_counts_sum'], dtype=np.float64)
+                merged_detail_beta_sum += payload['detail_beta_sum']
+                merged_detail_counts_sum += payload['detail_counts_sum']
+                merged_detail_cnt += payload['detail_cnt']
+            if payload['permute_equiv_max_diff'] is not None:
+                pd_val = payload['permute_equiv_max_diff']
+                merged_perm_diff = pd_val if merged_perm_diff is None else max(merged_perm_diff, pd_val)
 
         all_records.sort(key=lambda item: item[0])
         merged_q_tele.sort(key=lambda item: item[0])
@@ -529,6 +600,10 @@ def evaluate_sequence_model(
             'slice_height': slice_height,
             'slice_stride': slice_stride,
             'masked_source_frames': masked_source_frames,
+            'permute_frames': permute_frames,
+            'permute_equivariance_max_abs_diff': merged_perm_diff,
+            'mismatch_meta': mismatch_meta,
+            'shuffle_quality': shuffle_quality,
             'variants': {},
             'overlap_consistency_mad': {k: float(np.mean(v)) for k, v in overlap_mads.items()},
             'latency_memory': latency_info,
@@ -567,7 +642,15 @@ def evaluate_sequence_model(
                 cross_recv_mean=np.mean([item[3] for item in merged_q_tele], axis=0),
             )
         if merged_details:
-            summary['detail_delta_abs_mean'] = float(np.mean([item[1] for item in merged_details]))
+            delta_abs_mean = float(np.mean([item[1] for item in merged_details]))
+            summary['detail_delta_abs_mean'] = delta_abs_mean
+            if merged_detail_beta_sum is not None and merged_detail_cnt > 0:
+                np.savez(
+                    out_dir / 'detail_telemetry.npz',
+                    beta_mean=merged_detail_beta_sum / merged_detail_cnt,
+                    valid_counts_mean=merged_detail_counts_sum / merged_detail_cnt,
+                    delta_abs_mean=np.array(delta_abs_mean, dtype=np.float64),
+                )
 
         (out_dir / 'summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding='utf-8')
         return summary
@@ -585,6 +668,9 @@ def main():
     parser.add_argument('--slice-height', type=int, default=None)
     parser.add_argument('--slice-stride', type=int, default=None)
     parser.add_argument('--mask-frames', type=int, nargs='*', default=None)
+    parser.add_argument('--permute-frames', type=int, nargs=9, default=None, help='9 帧排列一致性重排，如 4 0 8 2 6 1 7 3 5')
+    parser.add_argument('--mismatch-meta', action='store_true', help='图像不动，仅错配帧身份与质量元数据')
+    parser.add_argument('--shuffle-quality', action='store_true', help='对 D1 推理置乱质量标签')
     parser.add_argument('--roi-file', default='docs/UCAN_exp1/splits/scene_split_v1/fixed_scatter_rois.json')
     parser.add_argument('--telemetry', action='store_true')
     parser.add_argument('--no-bench', action='store_true')
@@ -599,6 +685,9 @@ def main():
         slice_height=args.slice_height,
         slice_stride=args.slice_stride,
         masked_source_frames=args.mask_frames,
+        permute_frames=args.permute_frames,
+        mismatch_meta=args.mismatch_meta,
+        shuffle_quality=args.shuffle_quality,
         roi_file=Path(args.roi_file) if args.roi_file else None,
         save_telemetry_summary=args.telemetry,
         benchmark_latency=not args.no_bench,

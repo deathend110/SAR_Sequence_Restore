@@ -22,15 +22,24 @@ class DistributedValidationMixin:
         logger = get_root_logger()
         # BasicSR train.py 在结束全部 epoch 循环后可能以 total_iter + 1 或 +2 再次触发验证；
         # 若已在 total_iter 完成验证且无需保存图像，则直接跳过重复推理。
+        val_iters = {int(v) for v in (val_opt.get('val_iters') or [])} if val_opt is not None else set()
+        val_freq = val_opt.get('val_freq') if val_opt is not None else None
+        already_validated_at_total = (
+            (train_opt is not None and train_opt.get('total_iter') is not None)
+            and (
+                (int(train_opt['total_iter']) in val_iters)
+                if val_iters
+                else (bool(val_freq) and int(train_opt['total_iter']) % int(val_freq) == 0)
+            )
+        )
         if (
             self.opt.get('is_train')
             and not save_img
             and train_opt is not None
             and val_opt is not None
             and train_opt.get('total_iter') is not None
-            and val_opt.get('val_freq')
             and int(current_iter) > int(train_opt['total_iter'])
-            and int(train_opt['total_iter']) % int(val_opt['val_freq']) == 0
+            and already_validated_at_total
         ):
             if rank == 0:
                 logger.info(f'Skip duplicate end-of-training validation at iter {current_iter}.')

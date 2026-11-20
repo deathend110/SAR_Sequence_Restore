@@ -60,20 +60,29 @@ class SequenceDistributedValidationMixin:
         val_opt = self.opt.get('val') or {}
         total_iter = train_opt.get('total_iter')
         val_freq = val_opt.get('val_freq')
+        val_iters = {int(v) for v in (val_opt.get('val_iters') or [])}
+        already_validated_at_total = (
+            total_iter is not None
+            and (
+                (int(total_iter) in val_iters)
+                if val_iters
+                else (bool(val_freq) and int(total_iter) % int(val_freq) == 0)
+            )
+        )
         if (
             self.opt.get('is_train')
             and not save_img
             and total_iter is not None
             and int(current_iter) > int(total_iter)
             and (
-                (val_freq and int(total_iter) % int(val_freq) == 0)
+                already_validated_at_total
                 or (
                     exp_root is not None
                     and (Path(exp_root) / 'val_history.json').is_file()
                 )
             )
         ):
-            if val_freq and int(total_iter) % int(val_freq) == 0:
+            if already_validated_at_total:
                 if rank == 0:
                     logger.info(f'Skip duplicate end-of-training validation at iter {current_iter}.')
                 return

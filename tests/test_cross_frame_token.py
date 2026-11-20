@@ -686,3 +686,69 @@ def test_19_train_frame_chunk_equivalence_and_ddp(tmp_path):
 
     rendezvous = (tmp_path / 'chunk_ddp').as_uri()
     mp.spawn(_chunk_ddp_worker, args=(rendezvous, str(tmp_path)), nprocs=2, join=True)
+
+
+def test_20_val_iters_skip_config_gen_and_d1_additive(tmp_path):
+    """验证 val_iters 结束去重、D1_additive 配对初始化、配置生成器与 eval 干预参数合法性。"""
+    from basicsr.models.distributed_validation import DistributedValidationMixin
+    from basicsr.models.sequence_validation import SequenceDistributedValidationMixin
+    from basicsr.utils.options import yaml_load
+    from scripts.eval_sar_sequence import evaluate_sequence_model
+    from scripts.generate_exp_configs import write_exp_configs
+
+    # 1) D1_additive 配对与张量零差
+    res = generate_paired_inits(
+        None, seed=42, out_dir=tmp_path / 'inits', lksa_gate_gamma=4.0, groups=['D1', 'D1_additive']
+    )
+    assert 'D1_additive' in res
+    sd_d1 = torch.load(res['D1']['path'], map_location='cpu', weights_only=True)['params']
+    sd_add = torch.load(res['D1_additive']['path'], map_location='cpu', weights_only=True)['params']
+    shared_keys = set(sd_d1.keys()) & set(sd_add.keys())
+    same_shape_keys = [k for k in shared_keys if sd_d1[k].shape == sd_add[k].shape]
+    diff_shape_keys = [k for k in shared_keys if sd_d1[k].shape != sd_add[k].shape]
+    assert len(same_shape_keys) > 0
+    for k in same_shape_keys:
+        assert (sd_d1[k] - sd_add[k]).abs().max().item() == 0.0
+    for k in diff_shape_keys:
+        assert 'wb_out' in k
+        assert sd_add[k].abs().max().item() == 0.0
+
+    # 2) 配置生成器可生成完整可解析 YAML 且网络可直接构造
+    cfgs = write_exp_configs(tmp_path / 'cfgs', ['C', 'D1_additive'], [42], init_dir=str(tmp_path / 'inits'))
+    assert len(cfgs) == 2
+    loaded = yaml_load(str(cfgs[1]))
+    assert loaded['val']['val_iters'] == [4000, 8000, 12000, 14000, 16000, 18000, 20000]
+    assert loaded['network_g']['train_frame_chunk_size'] == 3
+    net_built = build_network(loaded['network_g'])
+    assert net_built.token_interaction.writeback_mode == 'additive'
+
+    # 3) val_iters 结束时 total_iter + 1 / + 2 跳过重复验证
+    class DummySeq(SequenceDistributedValidationMixin):
+        def __init__(self, root):
+            self.opt = {
+                'is_train': True,
+                'path': {'experiments_root': str(root)},
+                'train': {'total_iter': 20000},
+                'val': {'val_freq': 20000, 'val_iters': [4000, 20000]},
+            }
+
+        def _run_sequence_validation(self, *args, **kwargs):
+            return super()._run_sequence_validation(*args, **kwargs)
+
+    # _run_sequence_validation 应直接返回（不访问无效 dataloader）
+    DummySeq(tmp_path)._run_sequence_validation(None, 'val', 20002, None, False, rank=0, world_size=1, is_dist=False)
+
+    # 4) eval_sar_sequence 互斥与非法 permute 参数校验
+    with pytest.raises(ValueError, match='mutually exclusive'):
+        evaluate_sequence_model(
+            cfgs[0], Path(res['D1']['path']), Path('missing.txt'), tmp_path / 'e1',
+            permute_frames=list(range(9)), mismatch_meta=True,
+        )
+    with pytest.raises(ValueError, match='permutation of 0..8'):
+        evaluate_sequence_model(
+            cfgs[0], Path(res['D1']['path']), Path('missing.txt'), tmp_path / 'e2',
+            permute_frames=[0, 1, 2],
+        )
+
+    # DistributedValidationMixin 类存在且保持原有接口
+    assert hasattr(DistributedValidationMixin, 'dist_validation')

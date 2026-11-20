@@ -118,6 +118,13 @@ def build_group_network_opt(
             'token_opt': {**base_token, 'mask_mode': 'full', 'writeback_mode': 'additive'},
             **seq_extra,
         }
+    if group == 'D1_additive':
+        return {
+            'type': 'UCANSequence',
+            'backbone_opt': bb_opt,
+            'token_opt': {**base_token, 'mask_mode': 'full', 'quality_mode': 'real', 'writeback_mode': 'additive'},
+            **seq_extra,
+        }
     if group == 'C_detail':
         return {
             'type': 'UCANSequence',

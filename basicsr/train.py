@@ -153,6 +153,9 @@ def train_pipeline(root_path):
     logger.info(f'Start training from epoch: {start_epoch}, iter: {current_iter}')
     data_timer, iter_timer = AvgTimer(), AvgTimer()
     start_time = time.time()
+    save_iters = {int(v) for v in (opt['logger'].get('save_checkpoint_iters') or [])}
+    val_opt = opt.get('val')
+    val_iters = {int(v) for v in (val_opt.get('val_iters') or [])} if val_opt is not None else set()
 
     for epoch in range(start_epoch, total_epochs + 1):
         train_sampler.set_epoch(epoch)
@@ -183,17 +186,25 @@ def train_pipeline(root_path):
                 log_vars.update(model.get_current_log())
                 msg_logger(log_vars)
 
-            # save models and training states
-            if current_iter % opt['logger']['save_checkpoint_freq'] == 0:
+            # save models and training states（支持可选 save_checkpoint_iters 列表或默认固定间隔）
+            should_save = (
+                (current_iter in save_iters)
+                if save_iters
+                else (current_iter % opt['logger']['save_checkpoint_freq'] == 0)
+            )
+            if should_save:
                 logger.info('Saving models and training states.')
                 model.save(epoch, current_iter)
 
-            # validation
-            if opt.get('val') is not None and (current_iter % opt['val']['val_freq'] == 0):
+            # validation（支持可选 val_iters 列表或默认固定间隔）
+            should_val = False
+            if val_opt is not None:
+                should_val = (current_iter in val_iters) if val_iters else (current_iter % val_opt['val_freq'] == 0)
+            if should_val:
                 if len(val_loaders) > 1:
                     logger.warning('Multiple validation datasets are *only* supported by SRModel.')
                 for val_loader in val_loaders:
-                    model.validation(val_loader, current_iter, tb_logger, opt['val']['save_img'])
+                    model.validation(val_loader, current_iter, tb_logger, val_opt['save_img'])
 
             data_timer.start()
             iter_timer.start()

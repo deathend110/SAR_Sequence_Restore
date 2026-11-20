@@ -72,6 +72,7 @@ train:
 
 val:
   val_freq: 10000
+  val_iters: [100000, 120000, 140000, 150000, 160000, 175000, 190000, 200000]  # 90k 续训后覆盖全部衰减节点
   save_img: false
   pbar: false
   metrics:
@@ -87,6 +88,7 @@ val:
 logger:
   print_freq: 500
   save_checkpoint_freq: 10000
+  save_checkpoint_iters: [100000, 120000, 140000, 150000, 160000, 175000, 190000, 200000]
   use_tb_logger: true
   wandb:
     project: ~
