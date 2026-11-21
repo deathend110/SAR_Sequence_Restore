@@ -1,0 +1,591 @@
+[
+  {
+    "sequence_name": "city1_histeq_rstart_000001_cstart_000000001",
+    "frame_idx": 4,
+    "centers": [
+      [
+        394,
+        431
+      ],
+      [
+        388,
+        104
+      ],
+      [
+        453,
+        375
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "city1_histeq_rstart_000001_cstart_000006145",
+    "frame_idx": 4,
+    "centers": [
+      [
+        424,
+        418
+      ],
+      [
+        226,
+        103
+      ],
+      [
+        471,
+        487
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "city1_histeq_rstart_000301_cstart_000003841",
+    "frame_idx": 4,
+    "centers": [
+      [
+        393,
+        231
+      ],
+      [
+        450,
+        479
+      ],
+      [
+        423,
+        467
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "city1_histeq_rstart_000601_cstart_000001537",
+    "frame_idx": 4,
+    "centers": [
+      [
+        285,
+        296
+      ],
+      [
+        356,
+        177
+      ],
+      [
+        110,
+        444
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "city1_histeq_rstart_000601_cstart_000007681",
+    "frame_idx": 4,
+    "centers": [
+      [
+        202,
+        302
+      ],
+      [
+        426,
+        481
+      ],
+      [
+        34,
+        321
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "city1_histeq_rstart_000901_cstart_000005377",
+    "frame_idx": 4,
+    "centers": [
+      [
+        319,
+        369
+      ],
+      [
+        426,
+        21
+      ],
+      [
+        274,
+        371
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "city1_histeq_rstart_001201_cstart_000003073",
+    "frame_idx": 4,
+    "centers": [
+      [
+        303,
+        114
+      ],
+      [
+        282,
+        32
+      ],
+      [
+        290,
+        54
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "city1_histeq_rstart_001501_cstart_000000769",
+    "frame_idx": 4,
+    "centers": [
+      [
+        362,
+        116
+      ],
+      [
+        246,
+        116
+      ],
+      [
+        150,
+        171
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "city1_histeq_rstart_001501_cstart_000006913",
+    "frame_idx": 4,
+    "centers": [
+      [
+        417,
+        102
+      ],
+      [
+        363,
+        211
+      ],
+      [
+        235,
+        384
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "city1_histeq_rstart_001801_cstart_000004609",
+    "frame_idx": 4,
+    "centers": [
+      [
+        70,
+        99
+      ],
+      [
+        362,
+        217
+      ],
+      [
+        332,
+        221
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "city1_histeq_rstart_002101_cstart_000002305",
+    "frame_idx": 4,
+    "centers": [
+      [
+        494,
+        206
+      ],
+      [
+        472,
+        21
+      ],
+      [
+        489,
+        44
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "city1_histeq_rstart_002401_cstart_000000001",
+    "frame_idx": 4,
+    "centers": [
+      [
+        463,
+        310
+      ],
+      [
+        163,
+        37
+      ],
+      [
+        459,
+        282
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "city1_histeq_rstart_002401_cstart_000006145",
+    "frame_idx": 4,
+    "centers": [
+      [
+        409,
+        205
+      ],
+      [
+        383,
+        364
+      ],
+      [
+        495,
+        341
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "city1_histeq_rstart_002701_cstart_000003841",
+    "frame_idx": 4,
+    "centers": [
+      [
+        493,
+        466
+      ],
+      [
+        333,
+        167
+      ],
+      [
+        34,
+        208
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "city1_histeq_rstart_003001_cstart_000001537",
+    "frame_idx": 4,
+    "centers": [
+      [
+        463,
+        431
+      ],
+      [
+        377,
+        395
+      ],
+      [
+        458,
+        136
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "city1_histeq_rstart_003001_cstart_000007681",
+    "frame_idx": 4,
+    "centers": [
+      [
+        315,
+        456
+      ],
+      [
+        110,
+        395
+      ],
+      [
+        39,
+        171
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "city1_histeq_rstart_003301_cstart_000005377",
+    "frame_idx": 4,
+    "centers": [
+      [
+        407,
+        278
+      ],
+      [
+        387,
+        373
+      ],
+      [
+        484,
+        208
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "city1_histeq_rstart_003601_cstart_000003073",
+    "frame_idx": 4,
+    "centers": [
+      [
+        91,
+        268
+      ],
+      [
+        394,
+        272
+      ],
+      [
+        214,
+        457
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "city1_histeq_rstart_003901_cstart_000000769",
+    "frame_idx": 4,
+    "centers": [
+      [
+        386,
+        466
+      ],
+      [
+        252,
+        78
+      ],
+      [
+        411,
+        89
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "city1_histeq_rstart_003901_cstart_000006913",
+    "frame_idx": 4,
+    "centers": [
+      [
+        60,
+        126
+      ],
+      [
+        441,
+        404
+      ],
+      [
+        450,
+        470
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "city1_histeq_rstart_004201_cstart_000004609",
+    "frame_idx": 4,
+    "centers": [
+      [
+        453,
+        363
+      ],
+      [
+        418,
+        40
+      ],
+      [
+        234,
+        44
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "city1_histeq_rstart_004501_cstart_000002305",
+    "frame_idx": 4,
+    "centers": [
+      [
+        368,
+        460
+      ],
+      [
+        415,
+        481
+      ],
+      [
+        167,
+        379
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "city1_histeq_rstart_004801_cstart_000000001",
+    "frame_idx": 4,
+    "centers": [
+      [
+        205,
+        251
+      ],
+      [
+        243,
+        171
+      ],
+      [
+        196,
+        120
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "city1_histeq_rstart_004801_cstart_000006145",
+    "frame_idx": 4,
+    "centers": [
+      [
+        185,
+        494
+      ],
+      [
+        495,
+        61
+      ],
+      [
+        48,
+        477
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "city1_histeq_rstart_005101_cstart_000003841",
+    "frame_idx": 4,
+    "centers": [
+      [
+        98,
+        38
+      ],
+      [
+        386,
+        427
+      ],
+      [
+        227,
+        211
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "city1_histeq_rstart_005401_cstart_000001537",
+    "frame_idx": 4,
+    "centers": [
+      [
+        455,
+        25
+      ],
+      [
+        484,
+        344
+      ],
+      [
+        454,
+        125
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "city1_histeq_rstart_005401_cstart_000007681",
+    "frame_idx": 4,
+    "centers": [
+      [
+        232,
+        379
+      ],
+      [
+        344,
+        472
+      ],
+      [
+        154,
+        356
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "city1_histeq_rstart_005701_cstart_000005377",
+    "frame_idx": 4,
+    "centers": [
+      [
+        491,
+        472
+      ],
+      [
+        450,
+        290
+      ],
+      [
+        308,
+        392
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "city1_histeq_rstart_006001_cstart_000003073",
+    "frame_idx": 4,
+    "centers": [
+      [
+        197,
+        251
+      ],
+      [
+        221,
+        37
+      ],
+      [
+        144,
+        216
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "city1_histeq_rstart_006301_cstart_000000769",
+    "frame_idx": 4,
+    "centers": [
+      [
+        325,
+        334
+      ],
+      [
+        471,
+        236
+      ],
+      [
+        175,
+        347
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "city1_histeq_rstart_006301_cstart_000006913",
+    "frame_idx": 4,
+    "centers": [
+      [
+        470,
+        472
+      ],
+      [
+        442,
+        449
+      ],
+      [
+        171,
+        493
+      ]
+    ],
+    "half_win": 8
+  }
+]

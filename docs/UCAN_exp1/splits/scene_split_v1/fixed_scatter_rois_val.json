@@ -1,0 +1,572 @@
+[
+  {
+    "sequence_name": "sar_figure_rstart_000001_cstart_000000001",
+    "frame_idx": 4,
+    "centers": [
+      [
+        290,
+        235
+      ],
+      [
+        389,
+        288
+      ],
+      [
+        149,
+        138
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "sar_figure_rstart_000001_cstart_000003457",
+    "frame_idx": 4,
+    "centers": [
+      [
+        90,
+        357
+      ],
+      [
+        272,
+        216
+      ],
+      [
+        164,
+        347
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "sar_figure_rstart_000301_cstart_000000001",
+    "frame_idx": 4,
+    "centers": [
+      [
+        375,
+        57
+      ],
+      [
+        386,
+        33
+      ],
+      [
+        89,
+        288
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "sar_figure_rstart_000301_cstart_000003457",
+    "frame_idx": 4,
+    "centers": [
+      [
+        455,
+        460
+      ],
+      [
+        316,
+        460
+      ],
+      [
+        355,
+        296
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "sar_figure_rstart_000601_cstart_000000001",
+    "frame_idx": 4,
+    "centers": [
+      [
+        375,
+        57
+      ],
+      [
+        80,
+        73
+      ],
+      [
+        488,
+        272
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "sar_figure_rstart_000601_cstart_000003457",
+    "frame_idx": 4,
+    "centers": [
+      [
+        335,
+        197
+      ],
+      [
+        211,
+        395
+      ],
+      [
+        34,
+        338
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "sar_figure_rstart_000901_cstart_000000001",
+    "frame_idx": 4,
+    "centers": [
+      [
+        473,
+        52
+      ],
+      [
+        58,
+        389
+      ],
+      [
+        379,
+        65
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "sar_figure_rstart_000901_cstart_000003457",
+    "frame_idx": 4,
+    "centers": [
+      [
+        62,
+        148
+      ],
+      [
+        65,
+        207
+      ],
+      [
+        92,
+        96
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "sar_figure_rstart_001201_cstart_000000001",
+    "frame_idx": 4,
+    "centers": [
+      [
+        173,
+        52
+      ],
+      [
+        450,
+        283
+      ],
+      [
+        244,
+        329
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "sar_figure_rstart_001201_cstart_000003457",
+    "frame_idx": 4,
+    "centers": [
+      [
+        204,
+        267
+      ],
+      [
+        217,
+        441
+      ],
+      [
+        342,
+        75
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "sar_figure_rstart_001501_cstart_000000001",
+    "frame_idx": 4,
+    "centers": [
+      [
+        150,
+        283
+      ],
+      [
+        251,
+        438
+      ],
+      [
+        88,
+        186
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "sar_figure_rstart_001501_cstart_000003457",
+    "frame_idx": 4,
+    "centers": [
+      [
+        210,
+        457
+      ],
+      [
+        92,
+        236
+      ],
+      [
+        56,
+        241
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "sar_figure_rstart_001801_cstart_000000001",
+    "frame_idx": 4,
+    "centers": [
+      [
+        26,
+        397
+      ],
+      [
+        196,
+        484
+      ],
+      [
+        398,
+        437
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "sar_figure_rstart_001801_cstart_000003457",
+    "frame_idx": 4,
+    "centers": [
+      [
+        368,
+        207
+      ],
+      [
+        230,
+        205
+      ],
+      [
+        275,
+        316
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "sar_figure_rstart_002101_cstart_000000001",
+    "frame_idx": 4,
+    "centers": [
+      [
+        307,
+        101
+      ],
+      [
+        167,
+        249
+      ],
+      [
+        160,
+        408
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "sar_figure_rstart_002101_cstart_000003457",
+    "frame_idx": 4,
+    "centers": [
+      [
+        402,
+        57
+      ],
+      [
+        479,
+        61
+      ],
+      [
+        146,
+        140
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "sar_figure_rstart_002401_cstart_000000001",
+    "frame_idx": 4,
+    "centers": [
+      [
+        157,
+        137
+      ],
+      [
+        382,
+        372
+      ],
+      [
+        203,
+        162
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "sar_figure_rstart_002401_cstart_000003457",
+    "frame_idx": 4,
+    "centers": [
+      [
+        456,
+        385
+      ],
+      [
+        281,
+        56
+      ],
+      [
+        449,
+        463
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "sar_figure_rstart_002701_cstart_000000001",
+    "frame_idx": 4,
+    "centers": [
+      [
+        57,
+        255
+      ],
+      [
+        165,
+        320
+      ],
+      [
+        344,
+        493
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "sar_figure_rstart_002701_cstart_000003457",
+    "frame_idx": 4,
+    "centers": [
+      [
+        282,
+        86
+      ],
+      [
+        281,
+        113
+      ],
+      [
+        369,
+        471
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "sar_figure_rstart_003001_cstart_000000001",
+    "frame_idx": 4,
+    "centers": [
+      [
+        495,
+        96
+      ],
+      [
+        471,
+        209
+      ],
+      [
+        191,
+        329
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "sar_figure_rstart_003001_cstart_000003457",
+    "frame_idx": 4,
+    "centers": [
+      [
+        280,
+        470
+      ],
+      [
+        115,
+        414
+      ],
+      [
+        424,
+        482
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "sar_figure_rstart_003301_cstart_000000001",
+    "frame_idx": 4,
+    "centers": [
+      [
+        80,
+        72
+      ],
+      [
+        104,
+        105
+      ],
+      [
+        218,
+        143
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "sar_figure_rstart_003301_cstart_000003457",
+    "frame_idx": 4,
+    "centers": [
+      [
+        71,
+        492
+      ],
+      [
+        327,
+        91
+      ],
+      [
+        299,
+        162
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "sar_figure_rstart_003601_cstart_000000001",
+    "frame_idx": 4,
+    "centers": [
+      [
+        317,
+        335
+      ],
+      [
+        328,
+        89
+      ],
+      [
+        332,
+        460
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "sar_figure_rstart_003601_cstart_000003457",
+    "frame_idx": 4,
+    "centers": [
+      [
+        92,
+        92
+      ],
+      [
+        38,
+        67
+      ],
+      [
+        28,
+        239
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "sar_figure_rstart_003901_cstart_000000001",
+    "frame_idx": 4,
+    "centers": [
+      [
+        17,
+        336
+      ],
+      [
+        28,
+        89
+      ],
+      [
+        487,
+        369
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "sar_figure_rstart_003901_cstart_000003457",
+    "frame_idx": 4,
+    "centers": [
+      [
+        300,
+        61
+      ],
+      [
+        459,
+        438
+      ],
+      [
+        147,
+        380
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "sar_figure_rstart_004201_cstart_000000001",
+    "frame_idx": 4,
+    "centers": [
+      [
+        252,
+        387
+      ],
+      [
+        25,
+        33
+      ],
+      [
+        187,
+        369
+      ]
+    ],
+    "half_win": 8
+  },
+  {
+    "sequence_name": "sar_figure_rstart_004201_cstart_000003457",
+    "frame_idx": 4,
+    "centers": [
+      [
+        394,
+        288
+      ],
+      [
+        212,
+        114
+      ],
+      [
+        351,
+        110
+      ]
+    ],
+    "half_win": 8
+  }
+]
