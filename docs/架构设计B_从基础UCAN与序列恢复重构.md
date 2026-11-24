@@ -1,182 +1,164 @@
-# 架构设计 B：从基础 `UCAN` 与序列恢复重构的 `StripFormer-UCAN`
+# 架构设计 B：纯净 Transformer 血统重构的 `GGT-UCAN`
 
-> **设计定位**：跳出“在单帧 512 窗口内反复编码 9 帧、中间外挂粗插件”的渐进修补思路，从 **UCAN 原始算子特性（CVPR 2026）** 与 **条带式 SAR 滑窗几何的物理本质（$1536\text{ px}$ 连续地面上的 12 条带流形）** 出发，重构原生序列恢复架构 **`StripFormer-UCAN`（Ground-Centric Spectral-Spatial UCAN Sequence Transformer）**。  
-> **核心理念**：把计算资源从“9 份重复单帧全分辨率自注意力”解放出来，投入到 **多视野条带聚合（View $\to$ Ground）$\to$ 规范地面 H/L 双向与在线记忆传播（Ground $\leftrightarrow$ Ground）$\to$ 帧特异频空残差重建（Ground $\to$ View）**。
+> **审阅与重构定位**：经血统审查，上一版基于状态递推与小波滤波金字塔的混合设计混入了线性 RNN、SSM 及手工频域滤波模块，不符合“纯净 Transformer 血统”。本版从 **UCAN 原始纯注意力基因（CVPR 2026）** 与 **条带式 SAR 连续滑窗几何（$1536\text{ px}$ 地面流形）** 重新出发，剥离 `MBConv / 5×LKSA / ESA` 等重卷积与一切循环/小波组件，构建全程由 **`Linear Patchify + RMSNorm + QKV Attention + RoPE + SwiGLU`** 组成的原生序列纯 Transformer——**`GGT-UCAN`（Ground-Geometry Alternating Pure Transformer）**。
 
 ---
 
-## 1. 第一性原理重构：基础 `UCAN` 与序列恢复的三大根本矛盾
+## 1. 血统纯化审查与第一性原理重构
 
-通过逐行剖析 `basicsr/archs/ucan_arch.py` 与 `docs/Define.md` 的几何约束，发现若直接将基础 UCAN 拼装为序列恢复网络，存在三个结构性天花板：
+### 1.1 原生 UCAN 的“半卷积混血”病灶与纯 Transformer 破局准则
 
-| 矛盾维度 | 源码实证与物理事实 | 导致的结构性缺陷 |
+| 审阅对象 | 混血/非纯结构问题 | `GGT-UCAN` 纯净 Transformer 替换准则 |
 |---|---|---|
-| **1. 计算与表征的 3 倍几何冗余** | 9 帧各自覆盖 `512 px`，总输入宽 `4608 px`，但真实逻辑地面仅 `1536 px`（`s=0..11` 共 12 条带）；全分辨率 `patch_size=1` 下 9 帧并发过 `rg_1..rg_4` 在 24 GiB 4090 上直接 **OOM**，被迫切片 `chunk=3` 且裁低至 `H=64` | 算力消耗在重复编码同一个地面条带，且 `H=64` 截断了 `large_window=32` 与 `LKSA(k=23)` 纵向感受野；各帧独立解码导致重叠区天然不一致（`MAD = 1.00 ~ 1.89`） |
-| **2. 基础 UCAN 算子对 1-bit SAR 失配** | 原生配置 `embed_dim=48, mlp_ratio=1.0` 下，`SGFN` 通道折半至 `24`，`SDFL/DFRL` 空间与通道各 `24` 维单头，`LKSA` 仅覆盖 `16/48` 通道；`share=['N','F','N','F']` 直接硬拷贝上一组的注意力图；`FourierEmbedding` 为 1D `H*W` 展平 | 通道瓶颈太窄、无频域显式分支，难以剥离 $Q_L=1.5$ 带来的奇次谐波伪影；`RG1` 在强噪 L 区学出的错乱注意力会被 `RG2` 锁死继承；1D 相位编码阻碍跨高度泛化 |
-| **3. 缺乏“多视野优选 $\to$ H/L 记忆传播”流形** | `F1-F3, F5-F7` 拥有同地面但含 H 上下文的视野；`F0, F8` 构成两端全 H 锚点；`A+Fusion` 等权输出平均反而令 $F_4$ 中心 `-0.0258 dB` 负迁移 | 序列交互必须在 **“视野对齐后的地面坐标系”** 中先做门控优选、再沿地面轴完成 H$\to$L 先验记忆检索，最后映射回各帧视角 |
+| **空间降采样与显存瓶颈** | 原生 `UCAN` 采用 `patch_size=1` 全分辨率序列，9 帧 `4608 px` 并发过 4 个 `RG` 在 24 GiB 卡直接 OOM，被迫截断至 `H=64` | **`4×4` 过完备线性 Patchify (`16→128` 维)** + 自适应滑动索引（ICCV 2025），Token 数直降 **16 倍**，9 帧 `H=128` 可整批并发无截断 |
+| **原生 UCAN 卷积堆叠** | `BasicLayer` 在 `4×HybridBlock` 外硬叠了 `MBConv`、`5×LKSA`（16 通道大核）与 `ESA`（占算子与非有限故障主因） | **彻底剥离 `MBConv / 5×LKSA / ESA`**，仅保留并强化其“局部窗口 + Hedgehog 全局线性注意力”纯自注意力双核 |
+| **十字形旁瓣与局部建模** | 依赖 `5×LKSA` 静态固定大核捕捉点目标旁瓣，且 `SGFN` 通道折半为 24 维导致表征塌缩 | **正交轴向自注意力（Row/Col Axial MHSA）** 动态对齐距离-方位向十字旁瓣 + **SwiGLU** 前馈网 |
+| **序列状态记忆方式** | 非 Transformer 路线通过矩阵递归隐藏态传播 H$\to$L 信息，易受步间衰减限制 | **1-Hop 全秩 QKV 跨地面注意力**直接从 $F_0,F_8$ 检索；在线流式通过 **锚点常驻滚动 KV-Cache** 原生实现 |
 
-### 范式跃迁对比图
-
-```mermaid
-flowchart TD
-    subgraph OLD["旧范式：单帧骨干串联 + 中间外挂插件"]
-        O1["9帧各自独立过 RG1-RG2 (4608px 重复计算)"] --> O2["压成 144 个粗 Token 交互一次"]
-        O2 --> O3["回注后各自独立过 RG3-RG4 (仍无对齐地面交互)"]
-        O3 --> O4["重叠区各自为政 (MAD高), 算力浪费 3 倍"]
-    end
-
-    subgraph NEW["新范式 StripFormer-UCAN：面向地面流形的原生序列重构"]
-        N1["9帧轻量化视野编码 + 小波无损下采样 (1/2尺度, 9帧可并发)"] --> N2["View -> Ground 门控聚合：36个条带视野投射至 12 个规范地面槽位 G0-G11"]
-        N2 --> N3["Ground <-> Ground：双向 Gated DeltaNet H->L 记忆传播 + NSA 跨地面高频稀疏路由"]
-        N3 --> N4["Ground -> View 帧特异残差精炼 + FraIR 频谱重组 + 小波逆变换输出 9 帧"]
-    end
-```
-
----
-
-## 2. 总体架构：`StripFormer-UCAN` 三阶段全景流水线
-
-新架构将单帧基础 UCAN 解剖重构为 **视野浅层条带编码器（Stage I）**、**`VGV-Former` 地面中心序列引擎（Stage II）** 与 **小波-频域协同重建器（Stage III）**：
-
-```mermaid
-flowchart TD
-    X["输入 9 帧序列 (B, 9, 1, H, 512)"] --> WE["Stage I：浅层编码 + 2D Haar 小波无损下采样 WaveDown (空间减半, C=96)"]
-    WE --> VENC["2层 SSP-UCAN 视野编码块 (在各帧 512 窗口内提取带 H/L 上下文的局部条带特征)"]
-    VENC --> STRIPS["切分为 36 个规范条带特征块 V_{t,k} (B, 9, 4, 96, H/2, 64)"]
-
-    subgraph ST2["Stage II：VGV-Former 三级物理对齐序列核心"]
-        STRIPS --> V2G["Step 1 View -> Ground：基于质量与窗内偏置的门控聚合 (36视野 -> 12地面流形 G0-G11)"]
-        V2G --> GDN["Step 2a 地面轴双向 Gated DeltaNet 记忆扫描 (H区 G0-G3 & G8-G11 写入 -> L区 G4-G7 擦除噪声)"]
-        V2G --> NSA["Step 2b NSA 跨地面稀疏细粒度检索 (从 H 区同类地物拷贝结构 Token 至 G4-G7)"]
-        GDN --> GFUSE["流形精炼融合：得到统一高质量地面表征 G*_{0..11}"]
-        NSA --> GFUSE
-        GFUSE --> G2V["Step 3 Ground -> View：回投各帧 (t, k=s-t) 并叠加帧级低秩残差调制"]
-    end
-
-    VENC -.->|"高分辨率跳连 (保帧特异高频边缘)"| DEC
-    G2V --> DEC["Stage III：2层 SSP-UCAN 帧精炼 + FraIR 频谱重组 + WaveUp 逆小波重建"]
-    DEC --> OUT["9帧联合输出 (B, 9, 1, H, 512)"]
-```
-
----
-
-## 3. 重构基石一：面向 1-bit SAR 的 `SSP-UCAN Block`
-
-保留 UCAN “**窗口自注意力 + 大核卷积 + 线性全局注意力**” 三足鼎立的设计精髓，并针对 1-bit SAR 信号物理特性改造全部四个核心算子：
+### 1.2 血统纯化与范式跃迁对照图
 
 ```mermaid
 flowchart LR
-    subgraph RAW_UCAN["原生 UCAN BasicLayer (单帧 SR 基因)"]
-        U_IN["全分辨率 HxW (C=48)"] --> U_WIN["32x32 窗口 + 16x16 窗口 (share='F' 硬拷贝 attn)"]
-        U_WIN --> U_LIN["SDFL/DFRL (24维单头 Hedgehog + 1D H*W FOPE)"]
-        U_LIN --> U_LK["LKSA (仅 16 通道, k=23 各向同性大核)"]
-        U_LK --> U_SGFN["SGFN (C=48 折半至 24 维)"]
+    subgraph OLD["原生混血 UCAN 串联模式 (3倍算力冗余)"]
+        O1["9帧 patch_size=1 全分辨率 (4608px)"] --> O2["HybridBlock + MBConv + 5xLKSA + ESA 卷积堆叠"]
+        O2 --> O3["share='F' 硬拷贝含噪注意力图"]
+        O3 --> O4["各帧独立解码, MAD=1.6~1.9, V谷深 0.68 dB"]
     end
 
-    subgraph SSP_UCAN["重构 SSP-UCAN Block (序列 1-bit SAR 基因)"]
-        S_IN["WaveDown 1/2尺度 Token (LL/LH/HL/HH, C=96)"] --> S_PFT["PFT 跨层渐进聚焦窗口注意力 (乘法继承过滤杂波)"]
-        S_PFT --> S_ACL["ACL 高秩增强线性全局注意 + 2D地面坐标 RoPE-Mixed"]
-        S_ACL --> S_LK["正交旁瓣 SAR-LKSA (48通道, 1x31+31x1 十字核, 有界门控)"]
-        S_LK --> S_FFN["SwiGLU / 频空门控 FFN (无 1/2 通道塌缩)"]
+    subgraph NEW["GGT-UCAN 纯净 Transformer 模式 (零卷积堆叠/零RNN/零手工滤波)"]
+        N1["4x4 过完备线性 Patchify + 自适应平移索引 (Token降16倍)"] --> N2["Pure-UCAN：窗口PFT + 轴向旁瓣MHSA + Hedgehog全局 + SwiGLU"]
+        N2 --> N3["GGA-Former：View->Ground 汇聚 -> Ground 一跳差分稀疏恢复 -> Ground->View"]
+        N3 --> N4["线性 PatchUnembed + PixelShuffle(4) 残差输出 9 帧"]
     end
 ```
 
-### 四项核心算子级升级（对应 2025–2026 顶会方案）
-1. **无损小波 Token 化降维（借鉴 LWTformer, CVPR 2026 Findings）**：
-   - 废除原版 `patch_size=1` 导致 9 帧 OOM 的硬塞做法，在 `conv_first` 后接入 1 级可微 **2D 小波分解 `WaveDown`**：将空间降至 `(H/2, 256)`（Token 数骤降 **4 倍**，9 帧 `H=128` 整批并发显存可控），并将 `LL`（低频幅度）、`LH`（距离向边缘）、`HL`（方位向边缘）、`HH`（对角散射点/高频噪声）显式映射到 $C=96$ 通道中。
-2. **跨层渐进聚焦代替盲目 `share='F'`（借鉴 PFT, CVPR 2025）**：
-   - 原 UCAN 中 `RG2` 完全复用 `RG1` 的 Softmax 注意力图，一旦 `RG1` 在 L 区受 1-bit 散射伪影误导，`RG2` 无法修正。`SSP-UCAN` 改为 **渐进聚焦乘性继承**：
-     $$A^{(\ell)} = \operatorname{Norm}\!\left(A^{(\ell-1)} \odot \operatorname{Softmax}\!\left(\frac{Q^{(\ell)} K^{(\ell)\top}}{\sqrt{d_h}} + B_{\text{rel}}\right)\right)$$
-     保留共享加速与跨层结构先验的同时，允许深层剔除浅层的虚假相关性。
-3. **2D 全局地面坐标 `RoPE-Mixed` + 高秩线性注意力（借鉴 ACL, CVPR 2025 + MambaIRv2, CVPR 2025 + RoPE-Mixed, ECCV 2024）**：
-   - 将原 `SDFL` 中的 1D 序列 `FourierEmbedding` 替换为 **2D 混合频率旋转位置编码**，其水平坐标直接绑定 **物理地面绝对/相对列坐标 $x_g = 128t + c$**，纵向绑定 $y$。无论 `H=64/128/512`，不同帧对同一地物的空间相位完全一致，不再受窗口边界 `512` 截断影响。同时以卷积局部秩增强（`ACL`）防止线性全局分支在高对比散射点区域出现秩塌缩。
-4. **正交旁瓣感知 `SAR-LKSA`**：
-   - 针对 SAR 点目标冲激响应呈现典型 **距离向×方位向十字形 sinc 旁瓣** 的物理特性，将原 `LKSA` 扩展为 `48` 通道独立大核，采用正交条带核 `(1, 31) + (31, 1)` 捕获长距离旁瓣能量泄漏并保留 `gamma=4.0` 有界门控。
-
 ---
 
-## 4. 重构基石二：三级物理对齐 Token 体系与 `VGV-Former` 交互引擎
+## 2. 纯 Transformer 三级 Token 体系（Patch + Register + Ground Latent）
 
-在 `Stage II`，网络不再用模糊的 `16×9` 矩阵漫无目的互查，而是构建 **“多视野感知 $\to$ 12 规范地面条带记忆 $\to$ 帧回投”** 三级 Token 流形：
+`GGT-UCAN` 仅依赖纯线性投影生成三种职责正交的 Token，不再使用多尺度卷积金字塔或手工变换：
 
 ```mermaid
 flowchart TD
-    subgraph VIEW_IN["输入 36 个条带视野特征 (每条带对应地面 s=t+k)"]
-        V0["s=4 的四重视野：V(F1,k3) / V(F2,k2) / V(F3,k1) / V(F4,k0)"]
-    end
-
-    subgraph V2G["Step 1：View -> Ground 门控加权聚合 (NeurIPS'25 Gated Attention)"]
-        V0 --> CFEAT["拼接窗内位置嵌入 E_slot(k) + H比例 q_{t,k} + 边界距离"]
-        CFEAT --> VGATE["Sigmoid 门控打分：抑制纯 L 视野与窗边缘低质特征"]
-        VGATE --> GS["生成唯一规范地面特征块 G_s (12 个条带, s=0..11)"]
-    end
-
-    subgraph G2G["Step 2：Ground <-> Ground 双向 H->L 传播"]
-        GS --> FWD["正向 Gated DeltaNet (s: 0 -> 11, 左 H 区 G0-G3 注入散射先验)"]
-        GS --> BWD["反向 Gated DeltaNet (s: 11 -> 0, 右 H 区 G8-G11 注入散射先验)"]
-        GS --> SPARSE["NSA 跨地面稀疏注意力：L 区 (G4-G7) 检索 H 区 Top-K 细粒度小波 Token"]
-        FWD --> GMERGE["合并双向记忆状态与稀疏检索特征 -> G*_s"]
-        BWD --> GMERGE
-        SPARSE --> GMERGE
-    end
-
-    GMERGE --> G2V["Step 3：Ground -> View 精准切片 + 帧残差校准 -> 回送 9 帧解码"]
+    IMG["9帧输入 X (B, 9, 1, H, 512)"] --> PATCH["4x4 重叠线性 Patchify (Linear 16 -> 128, 步长4)"]
+    PATCH --> PTOK["视觉 Patch Token P_{t,y,c}：每帧 (H/4) x 128 列, 滑窗步长 128px 严格 = 32 列"]
+    META["条带质量标签 q_{t,k} + 槽位 k"] --> RTOK["4个条带寄存器 Token R_{t,k} (每帧4个, 借鉴 VGGT)"]
+    PTOK --> GROPE["绑定 2D 物理地面旋转位置编码 Ground-RoPE(y, x_g = 32t + c)"]
+    RTOK --> ENC["Stage I：帧内 Pure-UCAN Attention 交互 (Patch 与 Register 联合自注意力)"]
+    GROPE --> ENC
+    ENC --> GLAT["Stage II：映射入 12 条带规范地面 Token 库 G_{s,y,u} (全地面 384 列, 去除 3 倍重叠冗余)"]
 ```
 
-### 4.1 数学机制详解
+### 为什么 `4×4` 线性 Patchify + `Ground-RoPE` 天生契合滑窗 SAR？
+1. **严格整数列对齐**：每帧宽 `512 px` 经 `4×4` Patchify 后变为 `128` 列 Patch，而滑窗步长 `128 px` 严格对应 **`32` 个 Patch 列**。因此第 $t$ 帧第 $c$ 列 Patch 的物理地面列坐标为精确整数 $x_g = 32 t + c \in \{0,\dots, 383\}$。
+2. **2D 混合频率旋转编码（借鉴 RoPE-Mixed, ECCV 2024）**：将旋转角直接绑定 $(y, x_g)$ 而非帧内一维序号 `H*W`。于是跨帧观察同一地物目标的所有 Token（如 $F_1/k_3, F_2/k_2, F_3/k_1, F_4/k_0$）在注意力内积中**天然具有零相位差几何对齐**，且完全免疫训练高度（`H=128`）与整帧推理高度（`H=512`）的尺度跳变。
+3. **条带质量寄存器 Token（借鉴 VGGT, CVPR 2025）**：每帧注入 4 个与图像块并行的 Register Token $R_{t,k} = E_{\text{slot}}(k) + \operatorname{MLP}(q_{t,k})$，专门在帧内自注意力中吸收该窗口的 H/L 混合上下文与量化偏置，不污染空间 Patch 的细节坐标。
+4. **平移等变保护（借鉴 Adaptive Translation Equivariance, ICCV 2025）**：在 `4×4` Patchify 与末段 `PatchUnembed` 中引入自适应滑动相位偏移索引，消除纯线性块划分在点目标强边缘处的块效应。
 
-1. **Step 1 `View -> Ground` 门控聚合（彻底消除 `A+Fusion` 的 `-0.026 dB` 负迁移）**：
-   对于地面条带 $s \in \{0,\dots,11\}$，收集覆盖该地面的集合 $\mathcal{T}(s) = \{t : 0 \le s-t \le 3\}$。各视野首先通过局部像素投影并叠加帧内槽位上下文嵌入 $e_{\text{slot}}(s-t)$ 与质量编码 $q_{t, s-t}$，经空间自适应门控（借鉴 **Gated Attention**）融合：
-   $$G_s = \sum_{t \in \mathcal{T}(s)} \alpha_{t,s} \odot \widetilde{V}_{t, s-t}, \qquad \alpha_{t,s} = \operatorname{Softmax}_{t \in \mathcal{T}(s)}\!\left(\phi([\widetilde{V}_{t,s-t}, e_{\text{slot}}(s-t), q_{t,s-t}])\right)$$
-   相比固定等权平均（`Fusion`），网络能够学到“当 $s=4$ 同时出现在 $F_1/k_3$（旁有 $384\text{ px}$ 的 H 区强锚定）与 $F_4/k_0$（全帧处于 L 区）时，在特征空间动态压低 $F_4$ 的局部噪点权重”。
-2. **Step 2a 双向 `Gated DeltaNet` 地面关联记忆传播（借鉴 ICLR 2025）**：
-   将地面条带 $G_0 \dots G_{11}$ 的粗粒度/中粒度小波 Token 视为长度为 12（若按 $16\text{ px}$ 细条带则为 96）的 **空间地面序列**。沿着地面坐标 $s$ 维护一个二维键值关联记忆矩阵 $S_s \in \mathbb{R}^{d_k \times d_v}$：
-   $$S_s = \alpha_s S_{s-1}\!\left(I - \beta_s k_s k_s^\top\right) + \beta_s v_s k_s^\top, \qquad o_s = S_s q_s$$
-   - **物理直觉**：当正向扫描经过左端 H 区 $G_0\text{–}G_3$ 时，高置信度的“背景杂波统计 / 道路走向 / 建筑旁瓣原型”作为 $(k_s, v_s)$ 写入状态 $S$；进入中心 L 区 $G_4\text{–}G_7$ 时，遗忘门 $\alpha_s$ 与 Delta 纠错项 $(v_s - S_{s-1}k_s)$ **先擦除 1-bit 低采样率产生的过时噪声状态，再由 $q_s$ 从双端高精记忆（正向 + 反向 $G_8\text{–}G_{11}$）中精确检索同类散射先验**。
-3. **Step 2b `NSA` 跨地面细粒度稀疏路由（借鉴 ACL 2025）**：
-   对于需要恢复真实点目标与强边缘的 $G_4\text{–}G_7$，由压缩地面 Token 快速筛选出远端 H 区 $G_0\text{–}G_3, G_8\text{–}G_{11}$ 中最相似的 Top-$K$ 空间块（$16\times 16$ 尺度小波子带 `LH/HL/HH`），执行硬件友好的块稀疏交叉注意力，打破纯局部卷积与顺序扫描的距离衰减。
+---
 
-### 4.2 原生统一“离线双向”与“在线流式因果”恢复
+## 3. 纯化单帧基石：`Pure-UCAN Attention Block`（剥离卷积包袱）
 
-`StripFormer-UCAN` 通过切换 `Step 2` 的扫描方向与 `Step 1` 视野到达集合，无需重新设计网络即可原生支持流式低时延场景：
+保留 UCAN（CVPR 2026）“局部细粒度 + 全局线性上下文 + 跨层复用”核心思想，将其全部算子纯化为标准 `Pre-RMSNorm + Attention + SwiGLU` 结构：
+
+```mermaid
+flowchart LR
+    X_IN["输入帧 Token (P_t, R_t) (RMSNorm)"] --> B1["1. PFT 渐进聚焦窗口 MHSA (8x8/16x16 Shifted Window, 跨层乘性精炼)"]
+    X_IN --> B2["2. 正交轴向旁瓣 MHSA (同行 1x128 距离向 + 同列 H/4x1 方位向)"]
+    X_IN --> B3["3. Hedgehog 线性全局 MHSA (Softmax 拟态核 + 2D Ground-RoPE)"]
+    B1 --> CAT["多支路线性投影融合 + Gated Residual"]
+    B2 --> CAT
+    B3 --> CAT
+    CAT --> FFN["Pre-RMSNorm + SwiGLU FFN (D=128 -> 256 -> 128)"]
+    FFN --> X_OUT["输出上下文化视野 Token"]
+```
+
+- **跨层渐进聚焦升级 UCAN `share='F'`（借鉴 PFT, CVPR 2025）**：不再把第 1 层含噪窗口注意力硬拷贝给第 2 层，而是通过乘性重归一化 $A^{(\ell)} = \operatorname{Norm}(A^{(\ell-1)} \odot \operatorname{Softmax}(Q^{(\ell)}K^{(\ell)\top}/\sqrt{d_h}))$ 逐层淘汰 L 区 1-bit 杂波伪相关，既保留了计算加速又防止锁定噪声。
+- **正交轴向 MHSA 替代 `5×LKSA`**：SAR 点目标冲激响应呈沿距离向与方位向延展的十字形旁瓣。通过同行 `1×128` 与同列 `(H/4)×1` 一维自注意力（复杂度仅 $\mathcal{O}(HW(H+W))$），无需任何大核卷积即可在整个成像窗内动态抑制强散射点旁瓣遮蔽弱目标的现象。
+
+---
+
+## 4. 序列核心：`VGGT` 式交替纯注意力引擎（`GGA-Former`）
+
+在 `Stage II`，借鉴 **VGGT（CVPR 2025）** 的多视角交替注意力思想，围绕 **12 条带规范地面流形 $G_{s,y,u}$** 构建三步全纯 QKV 交替周期：
+
+```mermaid
+flowchart TD
+    V_IN["Stage I 输出的 9 帧视野 Patch (P_t) 与寄存器 (R_t)"] --> S1
+
+    subgraph S1["Step A：View -> Ground 集合交叉注意力 (每地面坐标 <= 8 个键值, O(1)复杂度)"]
+        Q_G["地面坐标查询 Q(G_{s,y,u})"] --> X_V2G["门控交叉注意力：检索同坐标 1~4 帧 Patch 与其 Register Token"]
+        X_V2G --> GATE_V["NeurIPS'25 Sigmoid 输出门控：自动抑制纯 L 视野与窗边缘劣质特征"]
+    end
+
+    GATE_V --> G_BASE["去冗余规范地面流形 G (384列 x H/4行, 共12个条带 s=0..11)"]
+
+    subgraph S2["Step B：Ground <-> Ground 跨地面一跳全秩恢复注意力 (无RNN步间衰减)"]
+        G_BASE --> CATA["路1 粗粒度原型差分自注意：CATANet 内容聚类 + DiffAttn 双Softmax相减抵消共模杂波"]
+        G_BASE --> NSA_B["路2 细粒度块稀疏选择注意：NSA 路由 L区(s=4..7) 直接拷贝 H区(s=0..3, 8..11) Top-K 散射块"]
+        CATA --> G_MERGE["质量非对称 Sigmoid 门控融合 (H区保守护原貌, L区高增益补细节)"]
+        NSA_B --> G_MERGE
+    end
+
+    G_MERGE --> S3
+
+    subgraph S3["Step C：Ground -> View 局部邻域回投交叉注意力"]
+        G_STAR["精炼地面流形 G*"] --> X_G2V["每帧 Patch P_{t,y,c} 仅查询对应地面 3x3 邻域 (9个键值, 容忍量化偏移)"]
+        R_KEEP["融合本帧寄存器 R_{t,k} 保留帧级合法差异"] --> X_G2V
+    end
+
+    X_G2V --> OUT["Stage III：2层 Pure-UCAN 精炼 -> Linear(128->16) + PixelShuffle(4) 输出残差"]
+```
+
+### 4.1 关键纯注意力公式
+
+1. **Step A 视野门控优选（替代 `A+Fusion` 盲目平均）**：
+   对于地面条带坐标 $(s,y,u)$，键值集合 $\Omega_{s,y,u} = \{(P_{t,y,32s+u-32t},\, R_{t,s-t}) : t \in \mathcal{T}(s)\}$ 至多含 $8$ 个 Token。引入逐头 Sigmoid 门控（**Gated Attention, NeurIPS 2025 Oral**）：
+   $$G_{s,y,u} = G^{(0)}_{s,y,u} + W_O\!\left(\sigma(W_g [G^{(0)}_{s,y,u}, q_s]) \odot \operatorname{MHSA}_{\text{cross}}\!\left(Q(G^{(0)}_{s,y,u}),\, K(\Omega_{s,y,u}),\, V(\Omega_{s,y,u})\right)\right)$$
+   相比固定等权平均（`A+Fusion` 实测令 $F_4$ 中心退化 `-0.0258 dB`），网络显式依据同地面多视野的寄存器质量特征动态剔除劣质视野。
+2. **Step B 跨地面一跳差分与稀疏检索（`Diff Transformer` + `CATANet` + `NSA`）**：
+   - **粗原型全局广播**：借鉴 **CATANet（CVPR 2025）** 将地面内容聚类为 $M$ 个语义原型，采用 **Differential Attention（ICLR 2025 Oral）** 计算双 Softmax 相减 $(A_1 - \lambda A_2)V$，将 1-bit 相干斑产生的背景共模相似度归零，实现两端全 H 区到中心全 L 区 $G_4\text{–}G_7$ 的**一跳零衰减辐射与杂波先验直传**；
+   - **细粒度块稀疏选择**：借鉴 **NSA（ACL 2025）**，利用粗注意力分布为 $G_4\text{–}G_7$ 中的每个局部结构块筛选 H 区 Top-$K$ 相似纹理/角反射器块执行全秩 QKV 交互，解决“只标定低频均值、不补全高频散射点”的顽疾。
+
+### 4.2 纯 Transformer 在线流式模式：锚点常驻滚动 `KV-Cache`（零 RNN 状态）
+
+对应 [跨帧Token交互实验指导书.md](file:///data/cjz/SAR_Sequence_Restore/docs/跨帧Token交互实验指导书.md#L747-L785) 第 13.4 节的 `Causal+L1` 在线恢复需求，纯 Transformer 无需任何循环隐藏态矩阵，直接依靠 **Block-Causal Mask + 分级 KV-Cache** 实现精确检索与恒定显存：
 
 ```mermaid
 sequenceDiagram
-    participant Stream as 滑窗帧流 (F0 -> F8)
-    participant Buf as 规范地面状态池 (G_s & DeltaNet 状态 S)
+    participant Stream as 在线滑窗输入流 (F0 -> F8)
+    participant AnchorKV as 常驻 H 锚点 KV 池 (稀疏保留高质 H 原型/Top-K块)
+    participant RollKV as 滑动 4 帧视野 KV 缓存 (仅当前地面重叠视野)
     participant Out as 在线输出帧
 
-    Note over Stream,Out: 模式 A (离线全双向)：G0-G11 汇聚全部 9 帧后执行正向+反向扫描
-    Note over Stream,Out: 模式 B (在线流式 Causal+L1, 时延=1步=128px)：仅保留正向记忆
-    Stream->>Buf: F0..F4 到达 (覆盖 s=0..7)
-    Stream->>Buf: F5 到达 (前瞻1帧, 首次触及右侧 H 边界 s=8)
-    Buf->>Buf: 单向 Gated DeltaNet (s=0->8) 更新左端 H 记忆状态 S
-    Buf->>Out: 结合已汇聚的 F1-F5 视野，立即解码输出完整 F4 (恒定 O(1) 缓存!)
+    Note over Stream,Out: 纯 QKV 注意力原生因果模式 (零循环隐藏态, 延迟 = 1 步 = 128 px)
+    Stream->>AnchorKV: F0 到达 (全 H 区): 压缩原型 KV 常驻锚点池 (仅数 MB)
+    Stream->>RollKV: F1..F4 陆续到达: 写入滚动窗口 KV, 更新已覆盖地面 G0..G7
+    Stream->>RollKV: F5 到达 (前瞻 1 帧, 首次引入右侧 H 边界条带 s=8)
+    RollKV->>Out: F4 执行因果跨地面 Attention = 查询 [AnchorKV(F0) ; RollKV(F1..F5)]
+    RollKV->>RollKV: 淘汰已完全滑出重叠域的最老视野 KV, 保持显存 O(1) 有界
 ```
 
 ---
 
-## 5. 面向“拉平 V 谷”的损失函数与两套方案决策对比
+## 5. 参数预算、方案对比与纯 Transformer 风险边界
 
-### 5.1 频空均衡联合损失（直接对准 `docs/Define.md` 目标）
-针对当前等权 Charbonnier 损失中 H 区（占比高、梯度干净）主导优化方向的问题，设计三项协同损失：
-$$\mathcal{L}_{\text{total}} = \underbrace{\frac{1}{9}\sum_{t=0}^{8} w_t \mathcal{L}_{\text{Charb}}(\hat{Y}_t, Y_t)}_{\text{V谷动态均衡加权}} + \lambda_{\text{wav}}\sum_{t=0}^{8}\mathcal{L}_{1}(\operatorname{DWT}(\hat{Y}_t), \operatorname{DWT}(Y_t)) + \lambda_{\text{fft}}\sum_{t=0}^{8}\mathcal{L}_{1}(|\mathcal{F}(\hat{Y}_t)|, |\mathcal{F}(Y_t)|)$$
-其中动态帧权 $w_t = \operatorname{clip}\!\left(\mathcal{L}_{\text{Charb},t} / \bar{\mathcal{L}}_{\text{H-anchor}},\, 1.0,\, 2.0\right)_{\text{stop-grad}}$，当且仅当中心帧误差高于两端全 H 锚点 $F_0,F_8$ 均值时平滑放大监督权重，一旦 V 谷拉平则自动退回等权 `1.0`。
+### 5.1 参数与计算量估算（按 `H=128, W=512, D=128, 4×4 Patchify`）
 
-### 5.2 路线 A（`UCAN-GDT`）vs 路线 B（`StripFormer-UCAN`）全景决策矩阵
+| 模块 | 参数量估算 | 计算复杂度与显存特性 |
+|---|---:|---|
+| 重叠线性 `Patchify(16→128)` + 自适应索引 + 寄存器 | `~42 K` | 空间 Token 由 `65,536` 骤降至 `4,096/帧`（9 帧 `H=128` 可单卡/双卡并发） |
+| `Stage I / III` 共 4 层 `Pure-UCAN Block` | `~690 K` | 窗口 PFT + 轴向 MHSA + Hedgehog 线性全局，**零 `5×LKSA` 与 `MBConv`** |
+| `Stage II` 2 轮 `GGA-Former`（`V2G` + 差分 `CATA/NSA` + `G2V`） | `~740 K` | `V2G/G2V` 为 $\le 9$ 键值 $\mathcal{O}(1)$ 集合注意力；`G2G` 仅在 12 条带流形计算 |
+| 线性 `PatchUnembed(128→16)` + `PixelShuffle(4)` | `~48 K` | 纯线性像素映射加回输入残差 |
+| **总计（`GGT-UCAN`）** | **`~1.52 M`** | 仍仅为 `HINT (24.87 M)` 的 **6.1%** |
 
-| 评估维度 | 路线 A：`UCAN-GDT`（实验演进） | 路线 B：`StripFormer-UCAN`（原生重构） |
+### 5.2 修正后的双路线最终决策矩阵
+
+| 对比维度 | 方案 A：`UCAN-GDT`（基于当前实验演进） | 方案 B：`GGT-UCAN`（纯净 Transformer 重构） |
 |---|---|---|
-| **设计出发点** | 精准手术式解决 `C_s42` 实测暴露的 4 大病灶 | 消除 3 倍滑窗算力浪费与原生 UCAN 算子失配 |
-| **Token 核心形态** | 尺度不变 `1×4` 辐射-频谱流 + `8×8` 走廊高频流 | `WaveDown` 小波多子带 Token $\leftrightarrow$ 12 条带规范地面流形 |
-| **跨帧交互引擎** | `GD-CFA`（差分注意力 + 质量 Sigmoid 输出门控） | `View->Ground` 门控聚合 + 双向 `Gated DeltaNet` + `NSA` |
-| **预计总参数量** | `~1.08 M`（骨干 `684K` + 新增 `394K`） | `~1.45 M`（从头训练轻量化双尺度骨干） |
-| **热启动与训练成本** | **100% 复用 `A_init`**，双卡 4090 `20k` 步约 `8–10h` 可出结果 | 需从零重训全网络（预计 `100k–150k` 步，约 `1.5–2.5` 天） |
-| **重叠一致性 (MAD)** | 由走廊交叉注意力显著压低（预计 `0.3–0.6`） | **结构级对齐地面流形**，残差解耦后理论趋近真实 GT（`~0.05–0.2`） |
-| **V 谷拉平与 SSIM 上限** | 中高（受限于原 UCAN `C=48` 通道与 `RG3/RG4` 独立解码） | **最高**（全地面 H$\to$L 关联记忆 + `WaveDown` 全帧并发 `H=128`） |
-| **在线流式恢复支持** | 需额外缓存 9 帧特征张量 | 原生单向 `Gated DeltaNet` 仅需 $\mathcal{O}(1)$ 记忆矩阵 $S$ |
-| **推荐科研节奏** | **近期首选（Gate 3 主力）**：最快形成优于 `C_s42` 的稳定收益与消融故事 | **中远期旗舰（冲顶刊/大论文核心章）**：以完整物理第一性原理打造专属架构 |
-
-### 5.3 路线 B 的核心风险边界（诚实约束）
-1. **不能热启动 `A_init`**：由于修改了 `WaveDown`（通道扩至 `96`）与地面坐标系 `RoPE-Mixed`，必须完整重训；若训练数据/正则不足，在 `3,344` 条序列上从零训练 `1.45M` 网络存在过拟合单一场景（如 Gate 1 中 `60k` 后退化）的风险，需配合频域增强与早停验证。
-2. **地面流形对跨帧真实微差的过度平滑风险**：若在 `Ground -> View` 阶段不保留各帧 `Stage I` 的高分辨率浅层跳连残差，强行共享同一个 $G_s^*$ 可能导致各帧与对应全精度 GT 之间原有的微小边缘视差被抹平。因此 **`Stage I` 到 `Stage III` 的帧特异高频跳连不可省略**。
+| **架构血统** | 原生混血 `UCAN` 骨干 + 门控差分 Token 插件 | **100% 纯净 Transformer**（零卷积堆叠 / 零 RNN / 零小波或 FFT 手工层） |
+| **热启动能力** | **直接加载 `A_init`（`683,817`）**，20k 步约 `8–10 h` 验证 | 彻底更换 `4×4` Patchify 与纯注意力骨干，**必须从零训练** |
+| **算力冗余度** | 保留 9 帧全分辨率骨干计算（3 倍几何冗余，`chunk=3`） | 通过 `4×4` Patchify 降 16 倍 Token，并于 12 条带地面流形去冗余交互 |
+| **流式因果能力** | 需修改绝对帧嵌入并保留全帧中间状态 | **Block-Causal + 锚点常驻滚动 KV-Cache** 原生一跳检索 |
+| **核心风险与工程约束** | 仍受限于原 UCAN `C=48` 窄子空间上限 | 纯 `4×4` Patchify 在强散射点边缘易现块接缝，且 3,344 条训练序列下缺少卷积归纳偏置更易过拟合，**必须配合 ICCV'25 自适应滑动索引、DropPath 与 V 谷动态均衡损失** |
