@@ -1,0 +1,134 @@
+# 自动生成的配对实验配置：D0 (seed=2026)，严禁手工偏离共享默认值
+name: ucan_seq_D0_s2026
+model_type: UCANSequenceModel
+scale: 1
+num_gpu: 2
+manual_seed: 2026
+datasets:
+  train:
+    name: sar_seq_train
+    type: SARSequenceDataset
+    dataroot_lq: /data/cjz/SAR_Transformer/dataset_range_2dsft/range_2d_sft_qh2p5_ql1p5_s1_fr0p9_fa0p5_phi0_lp0p99_hp99p9_roi600_eb64/LQ
+    dataroot_gt: /data/cjz/SAR_Transformer/dataset_range_2dsft/range_2d_sft_qh2p5_ql1p5_s1_fr0p9_fa0p5_phi0_lp0p99_hp99p9_roi600_eb64/GT
+    split_file: docs/UCAN_exp1/splits/scene_split_v1/train.txt
+    crop_height: 64
+    deterministic_crop_seed: 2026
+    grid_h: 4
+    grid_w: 4
+    use_shuffle: true
+    num_worker_per_gpu: 4
+    batch_size_per_gpu: 1
+    dataset_enlarge_ratio: 1
+    prefetch_mode: null
+  val:
+    name: sar_seq_val
+    type: SARSequenceDataset
+    dataroot_lq: /data/cjz/SAR_Transformer/dataset_range_2dsft/range_2d_sft_qh2p5_ql1p5_s1_fr0p9_fa0p5_phi0_lp0p99_hp99p9_roi600_eb64/LQ
+    dataroot_gt: /data/cjz/SAR_Transformer/dataset_range_2dsft/range_2d_sft_qh2p5_ql1p5_s1_fr0p9_fa0p5_phi0_lp0p99_hp99p9_roi600_eb64/GT
+    split_file: docs/UCAN_exp1/splits/scene_split_v1/val.txt
+    crop_height: null
+    grid_h: 4
+    grid_w: 4
+network_g:
+  type: UCANSequence
+  backbone_opt:
+    type: UCAN
+    upscale: 1
+    in_chans: 1
+    img_size: 128
+    embed_dim: 48
+    window_size: 16
+    img_range: 1.0
+    mlp_ratio: 1.0
+    conv_depth: 5
+    share:
+    - N
+    - F
+    - N
+    - F
+    mhsa_num_heads: 2
+    dfl_num_heads: 1
+    use_checkpoint: false
+    upsampler: null
+    resi_connection: 1conv
+    lksa_gate_gamma: 4.0
+  token_opt:
+    enabled: true
+    in_ch: 48
+    token_dim: 96
+    num_heads: 4
+    ffn_ratio: 2.0
+    num_layers: 2
+    num_frames: 9
+    granularity: region
+    tokenizer_type: grid
+    mask_mode: full
+    causal_lookahead:
+    - 1
+    - 0
+    use_frame_embed: true
+    use_geom_bias: true
+    use_ground_bias: true
+    quality_mode: constant
+    quality_src_only: false
+    writeback_mode: film
+    use_delta_ln: false
+    use_detail: false
+  train_frame_chunk_size: 3
+  eval_frame_batch_size: 1
+path:
+  pretrain_network_g: experiments/paired_inits_v1/s2026/init_D0_s2026.pth
+  strict_load_g: true
+  param_key_g: params
+  resume_state: null
+train:
+  total_iter: 20000
+  warmup_iter: -1
+  ema_decay: 0
+  optim_g:
+    type: Adam
+    lr: 0.0001
+    weight_decay: 0
+    betas:
+    - 0.9
+    - 0.99
+  scheduler:
+    type: MultiStepLR
+    milestones:
+    - 12000
+    - 17000
+    gamma: 0.5
+  pixel_opt:
+    type: CharbonnierLoss
+    loss_weight: 1.0
+    reduction: mean
+    eps: 1.0e-09
+val:
+  val_freq: 20000
+  val_iters: &id001
+  - 4000
+  - 8000
+  - 12000
+  - 14000
+  - 16000
+  - 18000
+  - 20000
+  save_img: false
+  pbar: false
+  metrics:
+    psnr:
+      type: calculate_psnr
+      crop_border: 0
+      test_y_channel: false
+    ssim:
+      type: calculate_ssim
+      crop_border: 0
+      test_y_channel: false
+logger:
+  print_freq: 200
+  save_checkpoint_freq: 20000
+  save_checkpoint_iters: *id001
+  use_tb_logger: true
+  wandb:
+    project: null
+    resume_id: null
