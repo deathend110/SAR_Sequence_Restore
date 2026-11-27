@@ -211,15 +211,34 @@ def _init_distributed_context() -> tuple[bool, int, int, torch.device, bool]:
     return True, rank, world_size, device, created_pg
 
 
-def _load_eval_checkpoint(net: torch.nn.Module, ckpt_path: Path, param_key: str | None):
-    """加载序列模型检查点；当评估无 token 模块的 mode A 时，兼容直接加载单帧 UCAN 权重。"""
+def _load_eval_checkpoint(
+    net: torch.nn.Module,
+    ckpt_path: Path,
+    param_key: str | None,
+    prefer_ema: bool = False,
+) -> str:
+    """加载序列模型检查点；当启用 EMA 且检查点含 params_ema 时自动对齐验证模型权重。"""
     ckpt = torch.load(ckpt_path, map_location='cpu', weights_only=True)
-    state = ckpt[param_key] if (param_key is not None and param_key in ckpt) else ckpt
+    used_key = str(param_key) if param_key is not None else 'raw'
+    if isinstance(ckpt, dict):
+        if prefer_ema and 'params_ema' in ckpt:
+            used_key = 'params_ema'
+            state = ckpt['params_ema']
+        elif param_key is not None and param_key in ckpt:
+            state = ckpt[param_key]
+        elif 'params' in ckpt:
+            used_key = 'params'
+            state = ckpt['params']
+        else:
+            state = ckpt
+    else:
+        state = ckpt
     has_backbone_prefix = any(k.startswith('backbone.') or k.startswith('module.backbone.') for k in state.keys())
     if hasattr(net, 'load_backbone_state_dict') and getattr(net, 'token_interaction', None) is None and not has_backbone_prefix:
         net.load_backbone_state_dict(state, strict=True)
     else:
         net.load_state_dict(state, strict=True)
+    return used_key
 
 
 def evaluate_sequence_model(
@@ -237,6 +256,7 @@ def evaluate_sequence_model(
     save_telemetry_summary: bool = False,
     benchmark_latency: bool = True,
     save_img: bool = False,
+    param_key_override: str | None = None,
 ):
     if permute_frames is not None and mismatch_meta:
         raise ValueError('--permute-frames and --mismatch-meta are mutually exclusive.')
@@ -254,8 +274,12 @@ def evaluate_sequence_model(
 
         names = [line.strip() for line in split_file.read_text(encoding='utf-8').splitlines() if line.strip()]
         net = build_network(opt['network_g']).to(device)
-        param_key = opt['path'].get('param_key_g', 'params')
-        _load_eval_checkpoint(net, ckpt_path, param_key)
+        if param_key_override is not None:
+            loaded_param_key = _load_eval_checkpoint(net, ckpt_path, param_key_override, prefer_ema=False)
+        else:
+            param_key = opt['path'].get('param_key_g', 'params')
+            prefer_ema = float(opt.get('train', {}).get('ema_decay', 0) or 0) > 0
+            loaded_param_key = _load_eval_checkpoint(net, ckpt_path, param_key, prefer_ema=prefer_ema)
         net.eval()
 
         total_params = sum(p.numel() for p in net.parameters())
@@ -624,6 +648,7 @@ def evaluate_sequence_model(
         summary = {
             'opt': str(opt_path),
             'checkpoint': str(ckpt_path),
+            'loaded_param_key': loaded_param_key,
             'split_file': str(split_file),
             'num_sequences': len(names),
             'num_frames': len(names) * 9,
@@ -640,6 +665,8 @@ def evaluate_sequence_model(
             'latency_memory': latency_info,
         }
         for v in variants:
+            f0_f8_p = [float(np.mean(frame_metrics[v][t]['psnr'])) for t in range(9)]
+            v_valley_depth = 0.5 * (f0_f8_p[0] + f0_f8_p[8]) - f0_f8_p[4]
             summary['variants'][v] = {
                 'nine_frame_psnr': float(np.mean([x for t in range(9) for x in frame_metrics[v][t]['psnr']])),
                 'nine_frame_ssim': float(np.mean([x for t in range(9) for x in frame_metrics[v][t]['ssim']])),
@@ -647,6 +674,7 @@ def evaluate_sequence_model(
                 'f4_ssim': float(np.mean(frame_metrics[v][4]['ssim'])),
                 'f4_center_psnr': float(np.mean(f4_center[v]['psnr'])),
                 'f4_center_ssim': float(np.mean(f4_center[v]['ssim'])),
+                'v_valley_depth': float(v_valley_depth),
                 'f4_strips_psnr': {f'k{k}': float(np.mean(f4_strip[v][k]['psnr'])) for k in range(4)},
                 'f4_strips_ssim': {f'k{k}': float(np.mean(f4_strip[v][k]['ssim'])) for k in range(4)},
                 'ground_s4_7_psnr': float(np.mean([x for s in range(4, 8) for x in ground_s[v][s]['psnr']])),
@@ -656,7 +684,7 @@ def evaluate_sequence_model(
                 'h_interior_ssim': float(np.mean(h_interior[v]['ssim'])),
                 'h_boundary_psnr': float(np.mean(h_boundary[v]['psnr'])),
                 'h_boundary_ssim': float(np.mean(h_boundary[v]['ssim'])),
-                'f0_f8_psnr': [float(np.mean(frame_metrics[v][t]['psnr'])) for t in range(9)],
+                'f0_f8_psnr': f0_f8_p,
                 'f0_f8_ssim': [float(np.mean(frame_metrics[v][t]['ssim'])) for t in range(9)],
                 'scatter_roi': {
                     k: float(np.mean(vals)) if vals else None for k, vals in roi_stats[v].items()
@@ -734,6 +762,7 @@ def main():
     parser.add_argument('--mismatch-meta', action='store_true', help='图像不动，仅错配帧身份与质量元数据')
     parser.add_argument('--shuffle-quality', action='store_true', help='对 D1 推理置乱质量标签')
     parser.add_argument('--roi-file', default='docs/UCAN_exp1/splits/scene_split_v1/fixed_scatter_rois.json')
+    parser.add_argument('--param-key', default=None, help='显式覆盖检查点参数键名（如 params 或 params_ema）')
     parser.add_argument('--telemetry', action='store_true')
     parser.add_argument('--no-bench', action='store_true')
     parser.add_argument('--save-img', action='store_true')
@@ -754,6 +783,7 @@ def main():
         save_telemetry_summary=args.telemetry,
         benchmark_latency=not args.no_bench,
         save_img=args.save_img,
+        param_key_override=args.param_key,
     )
     if res:
         print(json.dumps(res, ensure_ascii=False, indent=2))

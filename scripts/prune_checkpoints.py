@@ -15,10 +15,14 @@ def _parse_val_history(exp_dir: Path) -> list[dict]:
         records = []
         for entry in data:
             metrics = entry.get('metrics', {})
+            per_frame = entry.get('per_frame', {})
+            psnr_list = per_frame.get('psnr') if isinstance(per_frame, dict) else None
+            f4_psnr = float(psnr_list[4]) if isinstance(psnr_list, list) and len(psnr_list) >= 5 else None
             records.append({
                 'iter': int(entry['iter']),
                 'psnr': float(metrics.get('psnr', float('-inf'))),
                 'ssim': float(metrics.get('ssim', float('-inf'))),
+                'f4_psnr': f4_psnr,
             })
         return records
 
@@ -93,7 +97,15 @@ def prune_experiment(exp_dir: Path, dry_run: bool = False) -> dict:
     best_psnr_iter = best_psnr_rec['iter'] if best_psnr_rec['iter'] in iter_to_pth else last_iter
     best_ssim_iter = best_ssim_rec['iter'] if best_ssim_rec['iter'] in iter_to_pth else last_iter
 
+    f4_records = [r for r in saved_records if r.get('f4_psnr') is not None]
+    best_f4_rec = max(f4_records, key=lambda r: (r['f4_psnr'], r['iter'])) if f4_records else None
+    best_f4_iter = (
+        best_f4_rec['iter'] if (best_f4_rec is not None and best_f4_rec['iter'] in iter_to_pth) else None
+    )
+
     keep_iters = {best_psnr_iter, best_ssim_iter, last_iter}
+    if best_f4_iter is not None:
+        keep_iters.add(best_f4_iter)
     latest_path = models_dir / 'net_g_latest.pth'
 
     removed_models = []
@@ -101,7 +113,7 @@ def prune_experiment(exp_dir: Path, dry_run: bool = False) -> dict:
     bytes_freed = 0
 
     for p in sorted(models_dir.iterdir()):
-        if p.name in ('net_g_best_psnr.pth', 'net_g_best_ssim.pth'):
+        if p.name in ('net_g_best_psnr.pth', 'net_g_best_ssim.pth', 'net_g_best_f4.pth'):
             continue
         if p.name == 'net_g_latest.pth':
             continue
@@ -125,12 +137,15 @@ def prune_experiment(exp_dir: Path, dry_run: bool = False) -> dict:
                 if not dry_run:
                     p.unlink()
 
-    # 创建便于下游评估引用的符号链接 net_g_best_psnr.pth / net_g_best_ssim.pth
+    # 创建便于下游评估引用的符号链接 net_g_best_psnr.pth / net_g_best_ssim.pth（若含 F4 指标则同步建 net_g_best_f4.pth）
     if not dry_run:
-        for alias, target_iter in (
+        links = [
             ('net_g_best_psnr.pth', best_psnr_iter),
             ('net_g_best_ssim.pth', best_ssim_iter),
-        ):
+        ]
+        if best_f4_iter is not None:
+            links.append(('net_g_best_f4.pth', best_f4_iter))
+        for alias, target_iter in links:
             alias_path = models_dir / alias
             if alias_path.exists() or alias_path.is_symlink():
                 alias_path.unlink()
@@ -141,6 +156,9 @@ def prune_experiment(exp_dir: Path, dry_run: bool = False) -> dict:
         'dry_run': dry_run,
         'best_psnr': {'iter': best_psnr_iter, 'val': best_psnr_rec['psnr']},
         'best_ssim': {'iter': best_ssim_iter, 'val': best_ssim_rec['ssim']},
+        'best_f4_psnr': (
+            {'iter': best_f4_iter, 'val': best_f4_rec['f4_psnr']} if best_f4_iter is not None else None
+        ),
         'last_iter': last_iter,
         'has_latest_file': latest_path.exists(),
         'kept_iters': sorted(keep_iters),
