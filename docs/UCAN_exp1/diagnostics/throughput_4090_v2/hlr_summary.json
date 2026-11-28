@@ -1,0 +1,78 @@
+{
+  "device_name": "NVIDIA GeForce RTX 4090",
+  "param_counts": {
+    "backbone": 683817,
+    "stage1_hlr": 499070,
+    "stage2_hlr": 1244865,
+    "total": 2427752
+  },
+  "eval_512x512_fp32_efbs1": {
+    "precision": "fp32",
+    "eval_frame_batch_size": 1,
+    "seq_ms_mean": 3643.445569090545,
+    "peak_allocated_gib": 9.703319549560547,
+    "peak_reserved_gib": 10.296875
+  },
+  "train_matrix": [
+    {
+      "height": 128,
+      "precision": "bf16",
+      "batch_size_per_gpu": 2,
+      "chunk": 3,
+      "status": "ok",
+      "sec_per_iter": 6.789749341085553,
+      "seqs_per_sec_1gpu": 0.2945616840223792,
+      "seqs_per_sec_2gpu_est": 0.5891233680447584,
+      "peak_allocated_gib": 19.19770336151123,
+      "peak_reserved_gib": 22.919921875
+    },
+    {
+      "height": 128,
+      "precision": "bf16",
+      "batch_size_per_gpu": 2,
+      "chunk": 2,
+      "status": "ok",
+      "sec_per_iter": 7.496141603216529,
+      "seqs_per_sec_1gpu": 0.2668039247206613,
+      "seqs_per_sec_2gpu_est": 0.5336078494413226,
+      "peak_allocated_gib": 13.794896602630615,
+      "peak_reserved_gib": 16.60546875
+    },
+    {
+      "height": 128,
+      "precision": "bf16",
+      "batch_size_per_gpu": 2,
+      "chunk": 1,
+      "status": "ok",
+      "sec_per_iter": 9.023351521929726,
+      "seqs_per_sec_1gpu": 0.22164713356665083,
+      "seqs_per_sec_2gpu_est": 0.44329426713330167,
+      "peak_allocated_gib": 8.404297828674316,
+      "peak_reserved_gib": 9.890625
+    },
+    {
+      "height": 128,
+      "precision": "bf16",
+      "batch_size_per_gpu": 3,
+      "chunk": 2,
+      "status": "ok",
+      "sec_per_iter": 10.850786261959001,
+      "seqs_per_sec_1gpu": 0.27647766047309275,
+      "seqs_per_sec_2gpu_est": 0.5529553209461855,
+      "peak_allocated_gib": 15.102546215057373,
+      "peak_reserved_gib": 17.873046875
+    },
+    {
+      "height": 128,
+      "precision": "bf16",
+      "batch_size_per_gpu": 1,
+      "chunk": 3,
+      "status": "ok",
+      "sec_per_iter": 3.4135201515164226,
+      "seqs_per_sec_1gpu": 0.29295271614428875,
+      "seqs_per_sec_2gpu_est": 0.5859054322885775,
+      "peak_allocated_gib": 17.890164852142334,
+      "peak_reserved_gib": 22.1875
+    }
+  ]
+}

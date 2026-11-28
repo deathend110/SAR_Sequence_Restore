@@ -8,17 +8,19 @@ import torch.utils.checkpoint
 
 from basicsr.utils.registry import ARCH_REGISTRY
 from .cross_frame_token import CrossFrameTokenInteraction
+from .hl_retrieval_token import Stage1CalibrationModule, Stage2HLRetrievalModule
 from .ucan_arch import UCAN
 
 
 @ARCH_REGISTRY.register()
 class UCANSequence(nn.Module):
-    """九帧 SAR 序列恢复网络（Group A 单帧、B 帧内、C 跨帧、D 质量条件化及第二轮变体统一封装）。"""
+    """九帧 SAR 序列恢复网络（Group A 单帧、B 帧内、C 跨帧、D 质量条件化及 Step 3 UCAN-HLR 统一封装）。"""
 
     def __init__(
         self,
         backbone_opt: dict,
         token_opt: dict | None = None,
+        hlr_opt: dict | None = None,
         checkpoint_rg_pair: bool = False,
         eval_frame_batch_size: int = 1,
         train_frame_chunk_size: int = 0,
@@ -38,17 +40,38 @@ class UCANSequence(nn.Module):
         else:
             self.token_interaction = None
 
+        self.stage1_hlr = None
+        self.stage2_hlr = None
+        if hlr_opt is not None and hlr_opt.get('enabled', True):
+            if self.token_interaction is not None:
+                raise ValueError('token_opt and hlr_opt cannot both be enabled simultaneously')
+            base_ch = backbone_opt.get('embed_dim', 48)
+            s1_cfg = dict(hlr_opt.get('stage1_opt') or {})
+            if hlr_opt.get('stage1_enabled', True) and s1_cfg.get('enabled', True):
+                s1_cfg.pop('enabled', None)
+                s1_cfg.setdefault('in_ch', base_ch)
+                self.stage1_hlr = Stage1CalibrationModule(**s1_cfg)
+                self.stage1_hlr.reset_zero_init_branches()
+
+            s2_cfg = dict(hlr_opt.get('stage2_opt') or {})
+            if hlr_opt.get('stage2_enabled', True) and s2_cfg.get('enabled', True):
+                s2_cfg.pop('enabled', None)
+                s2_cfg.setdefault('in_ch', base_ch)
+                self.stage2_hlr = Stage2HLRetrievalModule(**s2_cfg)
+                self.stage2_hlr.reset_zero_init_branches()
+
     def load_backbone_state_dict(self, state_dict: dict, strict: bool = True):
         """从单帧 UCAN 或 UCANSequence checkpoint 中精确加载骨干权重（绝不重置新增模块的零初始化）。"""
         cleaned = {}
         has_backbone_prefix = any(k.startswith('backbone.') for k in state_dict.keys())
+        extra_prefixes = ('token_interaction.', 'stage1_hlr.', 'stage2_hlr.')
         for k, v in state_dict.items():
             key = k[7:] if k.startswith('module.') else k
             if has_backbone_prefix:
                 if key.startswith('backbone.'):
                     cleaned[key[len('backbone.'):]] = v
             else:
-                if not key.startswith('token_interaction.'):
+                if not key.startswith(extra_prefixes):
                     cleaned[key] = v
         return self.backbone.load_state_dict(cleaned, strict=strict)
 
@@ -74,15 +97,24 @@ class UCANSequence(nn.Module):
         ft = bb.rg_2(out1, xs, attn_map, qk_map)
         return xf, ft
 
-    def _decode_chunk(self, feat_chunk: torch.Tensor, xf_chunk: torch.Tensor, x_norm_chunk: torch.Tensor) -> torch.Tensor:
-        """单帧或帧块后半段前向：rg_3 -> rg_4 -> norm -> patch_unembed -> conv_after_body -> conv_last。"""
+    def _decode_body_chunk(self, feat_chunk: torch.Tensor, x_size: tuple[int, int]) -> torch.Tensor:
+        """单帧或帧块后半段主体前向：rg_3 -> rg_4 -> norm -> patch_unembed。"""
         bb = self.backbone
-        xs = (xf_chunk.shape[2], xf_chunk.shape[3])
-        out3, attn_map, qk_map = bb.rg_3(feat_chunk, xs)
-        ft = bb.rg_4(out3, xs, attn_map, qk_map)
-        ft_img = bb.patch_unembed(bb.norm(ft), xs)
-        res = bb.conv_after_body(ft_img) + xf_chunk
+        out3, attn_map, qk_map = bb.rg_3(feat_chunk, x_size)
+        ft = bb.rg_4(out3, x_size, attn_map, qk_map)
+        return bb.patch_unembed(bb.norm(ft), x_size)
+
+    def _reconstruct_chunk(self, u4_chunk: torch.Tensor, xf_chunk: torch.Tensor, x_norm_chunk: torch.Tensor) -> torch.Tensor:
+        """单帧或帧块末尾图像残差重建：conv_after_body + x_first -> conv_last + x_norm。"""
+        bb = self.backbone
+        res = bb.conv_after_body(u4_chunk) + xf_chunk
         return x_norm_chunk + bb.conv_last(res)
+
+    def _decode_chunk(self, feat_chunk: torch.Tensor, xf_chunk: torch.Tensor, x_norm_chunk: torch.Tensor) -> torch.Tensor:
+        """单帧或帧块后半段完整前向（保持旧版单 chunk 接口向后兼容）。"""
+        xs = (xf_chunk.shape[2], xf_chunk.shape[3])
+        u4_chunk = self._decode_body_chunk(feat_chunk, xs)
+        return self._reconstruct_chunk(u4_chunk, xf_chunk, x_norm_chunk)
 
     def forward(
         self,
@@ -157,12 +189,13 @@ class UCANSequence(nn.Module):
             feat = bb.pos_drop(bb.patch_embed(x_first))  # [B*T, HW, C]
             feat = self._run_rg_pair(bb.rg_1, bb.rg_2, feat, x_size)
 
-        # 3. 纯张量转置/重排并执行跨帧 Token 交互（绝不再调用带 LN 的 patch_embed）
+        # 3. 纯张量转置/重排并执行 RG2 后跨帧交互（旧版 token_interaction 或 Step 3 stage1_hlr）
         telemetry = {}
-        if self.token_interaction is not None:
+        stage1_mod = self.token_interaction if self.token_interaction is not None else self.stage1_hlr
+        if stage1_mod is not None:
             c_dim = feat.shape[-1]
             u_spatial = feat.transpose(1, 2).reshape(bsz, t_count, c_dim, x_size[0], x_size[1])
-            inter_out = self.token_interaction(
+            inter_out = stage1_mod(
                 u_spatial,
                 frame_ids=frame_ids,
                 token_quality=token_quality,
@@ -170,38 +203,102 @@ class UCANSequence(nn.Module):
                 return_telemetry=return_telemetry,
             )
             if return_telemetry:
-                u_updated, telemetry = inter_out
+                u_updated, tele1 = inter_out
+                telemetry.update(tele1)
             else:
                 u_updated = inter_out
             feat = u_updated.reshape(bsz * t_count, c_dim, x_size[0] * x_size[1]).transpose(1, 2).contiguous()
 
-        # 4. UCAN 后半段（RG3 -> RG4）与残差图像重建
-        if use_train_chunk:
-            step = self.train_frame_chunk_size
-            out_list = []
-            for s_idx in range(0, chunk_bt, step):
-                e_idx = min(s_idx + step, chunk_bt)
-                out_c = torch.utils.checkpoint.checkpoint(
-                    self._decode_chunk,
-                    feat[s_idx:e_idx],
-                    x_first[s_idx:e_idx],
-                    x_norm[s_idx:e_idx],
-                    use_reentrant=False,
-                )
-                out_list.append(out_c)
-            out = torch.cat(out_list, dim=0)
-        elif use_eval_chunk:
-            step = self.eval_frame_batch_size
-            out_list = []
-            for s_idx in range(0, chunk_bt, step):
-                e_idx = min(s_idx + step, chunk_bt)
-                out_list.append(self._decode_chunk(feat[s_idx:e_idx], x_first[s_idx:e_idx], x_norm[s_idx:e_idx]))
-            out = torch.cat(out_list, dim=0)
+        # 4. UCAN 后半段（RG3 -> RG4）、可选 Step 3 Stage2 H->L 检索与图像重建
+        if self.stage2_hlr is None:
+            if use_train_chunk:
+                step = self.train_frame_chunk_size
+                out_list = []
+                for s_idx in range(0, chunk_bt, step):
+                    e_idx = min(s_idx + step, chunk_bt)
+                    out_c = torch.utils.checkpoint.checkpoint(
+                        self._decode_chunk,
+                        feat[s_idx:e_idx],
+                        x_first[s_idx:e_idx],
+                        x_norm[s_idx:e_idx],
+                        use_reentrant=False,
+                    )
+                    out_list.append(out_c)
+                out = torch.cat(out_list, dim=0)
+            elif use_eval_chunk:
+                step = self.eval_frame_batch_size
+                out_list = []
+                for s_idx in range(0, chunk_bt, step):
+                    e_idx = min(s_idx + step, chunk_bt)
+                    out_list.append(self._decode_chunk(feat[s_idx:e_idx], x_first[s_idx:e_idx], x_norm[s_idx:e_idx]))
+                out = torch.cat(out_list, dim=0)
+            else:
+                feat = self._run_rg_pair(bb.rg_3, bb.rg_4, feat, x_size)
+                feat = bb.patch_unembed(bb.norm(feat), x_size)
+                out = self._reconstruct_chunk(feat, x_first, x_norm)
         else:
-            feat = self._run_rg_pair(bb.rg_3, bb.rg_4, feat, x_size)
-            feat = bb.patch_unembed(bb.norm(feat), x_size)
-            res = bb.conv_after_body(feat) + x_first
-            out = x_norm + bb.conv_last(res)
+            c_dim = feat.shape[-1]
+            if use_train_chunk:
+                step = self.train_frame_chunk_size
+                u4_list = []
+                for s_idx in range(0, chunk_bt, step):
+                    e_idx = min(s_idx + step, chunk_bt)
+                    u4_c = torch.utils.checkpoint.checkpoint(
+                        self._decode_body_chunk,
+                        feat[s_idx:e_idx],
+                        x_size,
+                        use_reentrant=False,
+                    )
+                    u4_list.append(u4_c)
+                u4_spatial = torch.cat(u4_list, dim=0)
+            elif use_eval_chunk:
+                step = self.eval_frame_batch_size
+                u4_list = []
+                for s_idx in range(0, chunk_bt, step):
+                    e_idx = min(s_idx + step, chunk_bt)
+                    u4_list.append(self._decode_body_chunk(feat[s_idx:e_idx], x_size))
+                u4_spatial = torch.cat(u4_list, dim=0)
+            else:
+                ft = self._run_rg_pair(bb.rg_3, bb.rg_4, feat, x_size)
+                u4_spatial = bb.patch_unembed(bb.norm(ft), x_size)
+
+            u4_seq = u4_spatial.reshape(bsz, t_count, c_dim, x_size[0], x_size[1])
+            s2_out = self.stage2_hlr(
+                u4_seq,
+                frame_ids=frame_ids,
+                masked_source_frames=masked_source_frames,
+                return_telemetry=return_telemetry,
+            )
+            if return_telemetry:
+                u4_seq, tele2 = s2_out
+                telemetry.update(tele2)
+            else:
+                u4_seq = s2_out
+            u4_spatial = u4_seq.reshape(chunk_bt, c_dim, x_size[0], x_size[1])
+
+            if use_train_chunk:
+                step = self.train_frame_chunk_size
+                out_list = []
+                for s_idx in range(0, chunk_bt, step):
+                    e_idx = min(s_idx + step, chunk_bt)
+                    out_c = torch.utils.checkpoint.checkpoint(
+                        self._reconstruct_chunk,
+                        u4_spatial[s_idx:e_idx],
+                        x_first[s_idx:e_idx],
+                        x_norm[s_idx:e_idx],
+                        use_reentrant=False,
+                    )
+                    out_list.append(out_c)
+                out = torch.cat(out_list, dim=0)
+            elif use_eval_chunk:
+                step = self.eval_frame_batch_size
+                out_list = []
+                for s_idx in range(0, chunk_bt, step):
+                    e_idx = min(s_idx + step, chunk_bt)
+                    out_list.append(self._reconstruct_chunk(u4_spatial[s_idx:e_idx], x_first[s_idx:e_idx], x_norm[s_idx:e_idx]))
+                out = torch.cat(out_list, dim=0)
+            else:
+                out = self._reconstruct_chunk(u4_spatial, x_first, x_norm)
         out = out / bb.img_range + bb.mean
         out = out[..., :h_ori * bb.upscale, :w_ori * bb.upscale]
         out_seq = out.reshape(bsz, t_count, ch_in, out.shape[-2], out.shape[-1])

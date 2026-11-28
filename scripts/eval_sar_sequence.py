@@ -234,7 +234,10 @@ def _load_eval_checkpoint(
     else:
         state = ckpt
     has_backbone_prefix = any(k.startswith('backbone.') or k.startswith('module.backbone.') for k in state.keys())
-    if hasattr(net, 'load_backbone_state_dict') and getattr(net, 'token_interaction', None) is None and not has_backbone_prefix:
+    has_extra_modules = any(
+        getattr(net, attr, None) is not None for attr in ('token_interaction', 'stage1_hlr', 'stage2_hlr')
+    )
+    if hasattr(net, 'load_backbone_state_dict') and (not has_extra_modules) and not has_backbone_prefix:
         net.load_backbone_state_dict(state, strict=True)
     else:
         net.load_state_dict(state, strict=True)
@@ -330,6 +333,13 @@ def evaluate_sequence_model(
             'wb_b_rms': [],
             'tanh_abs_max': [],
             'tanh_sat_gt095_ratio': [],
+            'stage1_delta_freq_rms': [],
+            'stage1_wb_b_rms': [],
+            'stage1_cons_delta_rms': [],
+            'stage2_delta_rms': [],
+            'stage2_alpha_h': [],
+            'stage2_l_gate_mean': [],
+            'stage2_h_gate_mean': [],
         }
         q_layer_moments = {}  # layer_idx -> [cnt, d_sum, d_sq, c_sum, c_sq]
         permute_equiv_max_diff = None
@@ -704,6 +714,18 @@ def evaluate_sequence_model(
                 telemetry_stats['tanh_abs_max_mean'] = float(np.mean(merged_scalar_tele['tanh_abs_max']))
             if merged_scalar_tele['tanh_sat_gt095_ratio']:
                 telemetry_stats['tanh_sat_gt095_ratio_mean'] = float(np.mean(merged_scalar_tele['tanh_sat_gt095_ratio']))
+            for hlr_k in (
+                'stage1_delta_freq_rms',
+                'stage1_wb_b_rms',
+                'stage1_cons_delta_rms',
+                'stage2_delta_rms',
+                'stage2_alpha_h',
+                'stage2_l_gate_mean',
+                'stage2_h_gate_mean',
+            ):
+                if merged_scalar_tele[hlr_k]:
+                    telemetry_stats[f'{hlr_k}_mean'] = float(np.mean(merged_scalar_tele[hlr_k]))
+                    telemetry_stats[f'{hlr_k}_std'] = float(np.std(merged_scalar_tele[hlr_k], ddof=0))
             if merged_q_moments:
                 ql_stats = []
                 for l_idx in sorted(merged_q_moments):
