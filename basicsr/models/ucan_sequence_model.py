@@ -1,5 +1,6 @@
-"""UCAN 九帧序列训练与验证模型包装（支持从 A_init 加载骨干、EMA、差异化学习率、冻结热身及面向 V 谷/高频的复合损失）。"""
+"""UCAN 九帧序列训练与验证模型包装（支持从 A_init 加载骨干、EMA、BF16 混合精度、差异化学习率、冻结热身及面向 V 谷/高频的复合损失）。"""
 
+from contextlib import nullcontext
 from copy import deepcopy
 
 import torch
@@ -74,7 +75,17 @@ class UCANSequenceModel(SequenceDistributedValidationMixin, SRModel):
                 self.model_ema(0)
             self.net_g_ema.eval()
 
-        # 冻结热身、梯度裁剪与可选复合损失超参（默认全部保持旧版等价行为）
+        # 冻结热身、BF16 混合精度、梯度裁剪与可选复合损失超参（默认全部保持旧版等价行为）
+        amp_raw = train_opt.get('amp_dtype', None)
+        if amp_raw is None or str(amp_raw).lower() in ('none', 'null', 'fp32', 'float32', ''):
+            self.amp_dtype = None
+        elif str(amp_raw).lower() in ('bf16', 'bfloat16'):
+            self.amp_dtype = torch.bfloat16
+        else:
+            raise ValueError(f'Unsupported amp_dtype: {amp_raw}')
+        val_opt = self.opt.get('val') or {}
+        self.use_bf16_val = bool(val_opt.get('use_bf16_val', False))
+
         self.freeze_backbone_iters = int(train_opt.get('freeze_backbone_iters', 0))
         self.grad_clip_norm = float(train_opt.get('grad_clip_norm', 0.0))
         self.l_region_weight = float(train_opt.get('l_region_weight', 1.0))
@@ -88,6 +99,8 @@ class UCANSequenceModel(SequenceDistributedValidationMixin, SRModel):
         self._weight_cache = {}
         self._ssim_window_cache = {}
 
+        if self.amp_dtype is not None:
+            logger.info(f'Mixed-precision autocast enabled for forward: amp_dtype={self.amp_dtype} (losses in FP32).')
         if self.freeze_backbone_iters > 0:
             logger.info(f'Freeze backbone updates for first {self.freeze_backbone_iters} iters (DDP static_graph safe).')
         if any(
@@ -264,7 +277,13 @@ class UCANSequenceModel(SequenceDistributedValidationMixin, SRModel):
 
     def optimize_parameters(self, current_iter):
         self.optimizer_g.zero_grad()
-        self.output = self.net_g(self.lq, frame_ids=self.frame_ids, token_quality=self.token_quality)
+        amp_dtype = getattr(self, 'amp_dtype', None)
+        use_amp = (amp_dtype is not None) and (self.lq.device.type == 'cuda')
+        amp_ctx = torch.amp.autocast('cuda', dtype=amp_dtype) if use_amp else nullcontext()
+        with amp_ctx:
+            self.output = self.net_g(self.lq, frame_ids=self.frame_ids, token_quality=self.token_quality)
+        # 无论前向是否开启 BF16，统一转回 FP32 后再算 Charbonnier/SSIM 等全部损失，避免 eps=1e-9 数值退化
+        self.output = self.output.float()
 
         bsz, t_count, ch, height, width = self.output.shape
         pred_flat = self.output.reshape(bsz * t_count, ch, height, width)
@@ -331,10 +350,13 @@ class UCANSequenceModel(SequenceDistributedValidationMixin, SRModel):
             net = self.get_bare_model(net)
         was_training = net.training
         net.eval()
+        use_bf16_val = bool(getattr(self, 'use_bf16_val', False)) and (self.lq.device.type == 'cuda')
+        amp_ctx = torch.amp.autocast('cuda', dtype=torch.bfloat16) if use_bf16_val else nullcontext()
         try:
-            with torch.no_grad():
+            with torch.no_grad(), amp_ctx:
                 self.output = self._run_sequence_inference(
                     net, self.lq, frame_ids=self.frame_ids, token_quality=self.token_quality
                 )
+            self.output = self.output.float()
         finally:
             net.train(was_training)

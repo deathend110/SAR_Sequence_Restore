@@ -69,13 +69,13 @@ def _make_v2_opt(tmp_path: Path, **train_overrides) -> dict:
     return opt
 
 
-def _make_dummy_batch(height: int = 32, width: int = 64) -> dict:
+def _make_dummy_batch(batch_size: int = 1, height: int = 32, width: int = 64) -> dict:
     torch.manual_seed(7)
     return {
-        'lq_seq': torch.rand(1, 9, 1, height, width),
-        'gt_seq': torch.rand(1, 9, 1, height, width),
-        'frame_ids': torch.arange(9, dtype=torch.long).unsqueeze(0),
-        'token_quality': compute_grid_quality_tensor(list(range(9)), 4, 4).unsqueeze(0),
+        'lq_seq': torch.rand(batch_size, 9, 1, height, width),
+        'gt_seq': torch.rand(batch_size, 9, 1, height, width),
+        'frame_ids': torch.arange(9, dtype=torch.long).unsqueeze(0).expand(batch_size, 9),
+        'token_quality': compute_grid_quality_tensor(list(range(9)), 4, 4).unsqueeze(0).expand(batch_size, 9, 4, 4, 1),
     }
 
 
@@ -256,3 +256,38 @@ def test_freeze_static_graph_ddp_safe(tmp_path):
     """验证在 chunk=3 + DDP static_graph 下冻结热身与解冻切换不报任何图变化异常。"""
     rendezvous = (tmp_path / 'v2_ddp').as_uri()
     mp.spawn(_freeze_ddp_worker, args=(rendezvous, str(tmp_path)), nprocs=2, join=True)
+
+
+def test_bf16_amp_and_multi_batch(tmp_path):
+    """验证 batch_size=2 下复合损失与权重图正常，且启用 amp_dtype='bf16' 时训练/验证正常且梯度有限。"""
+    opt = _make_v2_opt(
+        tmp_path,
+        amp_dtype='bf16',
+        l_region_weight=2.5,
+        f4_frame_weight=1.5,
+        overlap_consistency_weight=0.2,
+        grad_loss_weight=0.1,
+        ssim_loss_weight=0.05,
+    )
+    opt['val']['use_bf16_val'] = True
+    if torch.cuda.is_available():
+        opt['num_gpu'] = 1
+    model = build_model(deepcopy(opt))
+    assert model.amp_dtype == torch.bfloat16
+    assert model.use_bf16_val is True
+
+    batch = _make_dummy_batch(batch_size=2, height=32, width=64)
+    model.update_learning_rate(1)
+    model.feed_data(batch)
+    model.optimize_parameters(1)
+    assert model.output.dtype == torch.float32
+    for lk in ('l_pix', 'l_overlap', 'l_grad', 'l_ssim'):
+        assert torch.isfinite(torch.tensor(model.log_dict[lk]))
+    for p in model.net_g.parameters():
+        if p.grad is not None:
+            assert torch.isfinite(p.grad).all()
+    model.test()
+    assert model.output.shape == (2, 9, 1, 32, 64)
+    assert model.output.dtype == torch.float32
+    assert torch.isfinite(model.output).all()
+

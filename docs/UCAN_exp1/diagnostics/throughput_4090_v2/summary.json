@@ -1,0 +1,284 @@
+{
+  "device_name": "NVIDIA GeForce RTX 4090",
+  "eval_10seqs_512x512": {
+    "fp32_efbs1": {
+      "status": "ok",
+      "precision": "fp32",
+      "eval_frame_batch_size": 1,
+      "mean_psnr": 21.976371263296542,
+      "mean_ssim": 0.7190611964487623,
+      "psnr_diff_vs_fp32_efbs1": 0.0,
+      "max_float_diff_vs_fp32": 0.0,
+      "max_u8_diff_vs_fp32": 0,
+      "seq_ms_mean": 3545.886135660112,
+      "peak_allocated_gib": 8.982921600341797,
+      "peak_reserved_gib": 10.390625
+    },
+    "fp32_efbs2": {
+      "status": "ok",
+      "precision": "fp32",
+      "eval_frame_batch_size": 2,
+      "mean_psnr": 21.977097161934818,
+      "mean_ssim": 0.7190719722502786,
+      "psnr_diff_vs_fp32_efbs1": 0.0007258986382758792,
+      "max_float_diff_vs_fp32": 0.00022202730178833008,
+      "max_u8_diff_vs_fp32": 1,
+      "seq_ms_mean": 6866.011187341064,
+      "peak_allocated_gib": 16.093761444091797,
+      "peak_reserved_gib": 16.580078125
+    },
+    "fp32_efbs3": {
+      "status": "OOM",
+      "precision": "fp32",
+      "eval_frame_batch_size": 3
+    },
+    "bf16_efbs1": {
+      "status": "ok",
+      "precision": "bf16",
+      "eval_frame_batch_size": 1,
+      "mean_psnr": 21.96348634377865,
+      "mean_ssim": 0.7188943733154605,
+      "psnr_diff_vs_fp32_efbs1": -0.012884919517890836,
+      "max_float_diff_vs_fp32": 0.006340146064758301,
+      "max_u8_diff_vs_fp32": 2,
+      "seq_ms_mean": 3110.9138552099466,
+      "peak_allocated_gib": 8.521503448486328,
+      "peak_reserved_gib": 9.361328125
+    },
+    "bf16_efbs2": {
+      "status": "ok",
+      "precision": "bf16",
+      "eval_frame_batch_size": 2,
+      "mean_psnr": 21.963632954776877,
+      "mean_ssim": 0.7189032262706042,
+      "psnr_diff_vs_fp32_efbs1": -0.012738308519665509,
+      "max_float_diff_vs_fp32": 0.007176518440246582,
+      "max_u8_diff_vs_fp32": 2,
+      "seq_ms_mean": 3702.6661632582545,
+      "peak_allocated_gib": 15.583515167236328,
+      "peak_reserved_gib": 18.484375
+    },
+    "bf16_efbs3": {
+      "status": "OOM",
+      "precision": "bf16",
+      "eval_frame_batch_size": 3
+    }
+  },
+  "train_matrix": [
+    {
+      "height": 64,
+      "precision": "fp32",
+      "batch_size_per_gpu": 1,
+      "chunk": 3,
+      "status": "ok",
+      "sec_per_iter": 2.8686381126753986,
+      "seqs_per_sec_1gpu": 0.34859747403528807,
+      "seqs_per_sec_2gpu_est": 0.6971949480705761,
+      "peak_allocated_gib": 9.862231254577637,
+      "peak_reserved_gib": 12.447265625
+    },
+    {
+      "height": 64,
+      "precision": "fp32",
+      "batch_size_per_gpu": 2,
+      "chunk": 3,
+      "status": "ok",
+      "sec_per_iter": 5.670571003342047,
+      "seqs_per_sec_1gpu": 0.3526981672253581,
+      "seqs_per_sec_2gpu_est": 0.7053963344507161,
+      "peak_allocated_gib": 10.552634716033936,
+      "peak_reserved_gib": 13.025390625
+    },
+    {
+      "height": 64,
+      "precision": "fp32",
+      "batch_size_per_gpu": 2,
+      "chunk": 6,
+      "status": "OOM"
+    },
+    {
+      "height": 64,
+      "precision": "fp32",
+      "batch_size_per_gpu": 3,
+      "chunk": 3,
+      "status": "ok",
+      "sec_per_iter": 8.43782525556162,
+      "seqs_per_sec_1gpu": 0.35554184984129783,
+      "seqs_per_sec_2gpu_est": 0.7110836996825957,
+      "peak_allocated_gib": 11.258140563964844,
+      "peak_reserved_gib": 13.62890625
+    },
+    {
+      "height": 64,
+      "precision": "fp32",
+      "batch_size_per_gpu": 4,
+      "chunk": 6,
+      "status": "OOM"
+    },
+    {
+      "height": 64,
+      "precision": "bf16",
+      "batch_size_per_gpu": 1,
+      "chunk": 3,
+      "status": "ok",
+      "sec_per_iter": 2.016314742155373,
+      "seqs_per_sec_1gpu": 0.49595431660189787,
+      "seqs_per_sec_2gpu_est": 0.9919086332037957,
+      "peak_allocated_gib": 8.772437572479248,
+      "peak_reserved_gib": 10.962890625
+    },
+    {
+      "height": 64,
+      "precision": "bf16",
+      "batch_size_per_gpu": 2,
+      "chunk": 3,
+      "status": "ok",
+      "sec_per_iter": 3.922669302439317,
+      "seqs_per_sec_1gpu": 0.509856897382682,
+      "seqs_per_sec_2gpu_est": 1.019713794765364,
+      "peak_allocated_gib": 9.202740669250488,
+      "peak_reserved_gib": 11.318359375
+    },
+    {
+      "height": 64,
+      "precision": "bf16",
+      "batch_size_per_gpu": 2,
+      "chunk": 6,
+      "status": "ok",
+      "sec_per_iter": 3.401868481421843,
+      "seqs_per_sec_1gpu": 0.5879122049903825,
+      "seqs_per_sec_2gpu_est": 1.175824409980765,
+      "peak_allocated_gib": 17.307029724121094,
+      "peak_reserved_gib": 21.39453125
+    },
+    {
+      "height": 64,
+      "precision": "bf16",
+      "batch_size_per_gpu": 3,
+      "chunk": 3,
+      "status": "ok",
+      "sec_per_iter": 5.86661607096903,
+      "seqs_per_sec_1gpu": 0.5113680465380221,
+      "seqs_per_sec_2gpu_est": 1.0227360930760443,
+      "peak_allocated_gib": 9.636339664459229,
+      "peak_reserved_gib": 11.673828125
+    },
+    {
+      "height": 64,
+      "precision": "bf16",
+      "batch_size_per_gpu": 4,
+      "chunk": 6,
+      "status": "ok",
+      "sec_per_iter": 6.620568607933819,
+      "seqs_per_sec_1gpu": 0.6041777129545283,
+      "seqs_per_sec_2gpu_est": 1.2083554259090565,
+      "peak_allocated_gib": 18.170325756072998,
+      "peak_reserved_gib": 22.109375
+    },
+    {
+      "height": 128,
+      "precision": "fp32",
+      "batch_size_per_gpu": 1,
+      "chunk": 1,
+      "status": "ok",
+      "sec_per_iter": 4.254619688959792,
+      "seqs_per_sec_1gpu": 0.23503863402759015,
+      "seqs_per_sec_2gpu_est": 0.4700772680551803,
+      "peak_allocated_gib": 7.645725250244141,
+      "peak_reserved_gib": 9.34375
+    },
+    {
+      "height": 128,
+      "precision": "fp32",
+      "batch_size_per_gpu": 1,
+      "chunk": 3,
+      "status": "OOM"
+    },
+    {
+      "height": 128,
+      "precision": "fp32",
+      "batch_size_per_gpu": 2,
+      "chunk": 2,
+      "status": "ok",
+      "sec_per_iter": 12.046049140160903,
+      "seqs_per_sec_1gpu": 0.1660295402026963,
+      "seqs_per_sec_2gpu_est": 0.3320590804053926,
+      "peak_allocated_gib": 15.031307220458984,
+      "peak_reserved_gib": 18.248046875
+    },
+    {
+      "height": 128,
+      "precision": "fp32",
+      "batch_size_per_gpu": 2,
+      "chunk": 3,
+      "status": "OOM"
+    },
+    {
+      "height": 128,
+      "precision": "fp32",
+      "batch_size_per_gpu": 3,
+      "chunk": 3,
+      "status": "OOM"
+    },
+    {
+      "height": 128,
+      "precision": "bf16",
+      "batch_size_per_gpu": 1,
+      "chunk": 1,
+      "status": "ok",
+      "sec_per_iter": 4.693824503570795,
+      "seqs_per_sec_1gpu": 0.213045885980453,
+      "seqs_per_sec_2gpu_est": 0.426091771960906,
+      "peak_allocated_gib": 6.627285480499268,
+      "peak_reserved_gib": 8.1328125
+    },
+    {
+      "height": 128,
+      "precision": "bf16",
+      "batch_size_per_gpu": 1,
+      "chunk": 3,
+      "status": "ok",
+      "sec_per_iter": 3.368087717797607,
+      "seqs_per_sec_1gpu": 0.29690438129500385,
+      "seqs_per_sec_2gpu_est": 0.5938087625900077,
+      "peak_allocated_gib": 17.424688816070557,
+      "peak_reserved_gib": 21.69140625
+    },
+    {
+      "height": 128,
+      "precision": "bf16",
+      "batch_size_per_gpu": 2,
+      "chunk": 2,
+      "status": "ok",
+      "sec_per_iter": 7.199313531629741,
+      "seqs_per_sec_1gpu": 0.2778042644223124,
+      "seqs_per_sec_2gpu_est": 0.5556085288446247,
+      "peak_allocated_gib": 12.876039981842041,
+      "peak_reserved_gib": 15.56640625
+    },
+    {
+      "height": 128,
+      "precision": "bf16",
+      "batch_size_per_gpu": 2,
+      "chunk": 3,
+      "status": "ok",
+      "sec_per_iter": 6.705459671095014,
+      "seqs_per_sec_1gpu": 0.2982644140895111,
+      "seqs_per_sec_2gpu_est": 0.5965288281790222,
+      "peak_allocated_gib": 18.282604217529297,
+      "peak_reserved_gib": 22.400390625
+    },
+    {
+      "height": 128,
+      "precision": "bf16",
+      "batch_size_per_gpu": 3,
+      "chunk": 3,
+      "status": "ok",
+      "sec_per_iter": 10.003937083529308,
+      "seqs_per_sec_1gpu": 0.2998819339776999,
+      "seqs_per_sec_2gpu_est": 0.5997638679553998,
+      "peak_allocated_gib": 19.144519805908203,
+      "peak_reserved_gib": 23.111328125
+    }
+  ]
+}
