@@ -291,3 +291,30 @@ def test_bf16_amp_and_multi_batch(tmp_path):
     assert model.output.dtype == torch.float32
     assert torch.isfinite(model.output).all()
 
+
+def test_make_exp_dirs_skips_pretrain_backbone(tmp_path):
+    """验证 make_exp_dirs 与路径展开将 pretrain_backbone_g 视为文件路径而非待建目录。"""
+    from basicsr.utils import make_exp_dirs
+
+    backbone_file = tmp_path / 'net_g_best_psnr.pth'
+    backbone_file.write_bytes(b'dummy')
+    exp_root = tmp_path / 'exp_hlr'
+    opt = {
+        'is_train': True,
+        'rank': 0,
+        'path': {
+            'experiments_root': str(exp_root),
+            'models': str(exp_root / 'models'),
+            'training_states': str(exp_root / 'training_states'),
+            'log': str(exp_root),
+            'visualization': str(exp_root / 'visualization'),
+            'pretrain_backbone_g': str(backbone_file),
+            'strict_load_g': True,
+            'param_key_g': 'params',
+            'resume_state': None,
+        },
+    }
+    make_exp_dirs(opt)
+    assert backbone_file.is_file()
+    assert (exp_root / 'models').is_dir()
+

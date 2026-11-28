@@ -167,7 +167,7 @@ def parse_options(root_path, is_train=True):
 
     # paths
     for key, val in opt['path'].items():
-        if (val is not None) and ('resume_state' in key or 'pretrain_network' in key):
+        if (val is not None) and ('resume_state' in key or 'pretrain_network' in key or 'pretrain_backbone' in key):
             opt['path'][key] = osp.expanduser(val)
 
     if is_train:
